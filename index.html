@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>BLUEWAVE | 오늘, 바다를 만나세요</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="phone">
+  <header><div class="brand"><span class="brand-mark">◉</span><div><b>BLUEWAVE</b><small>나의 바다 탐험 기록</small></div></div><button class="profile" aria-label="내 프로필">🧑🏻</button></header>
+
+  <section id="explore" class="screen active">
+    <div class="map">
+      <div class="map-copy"><span>📍 부산 · 광안리</span><h1>파도 너머,<br><em>새로운 친구</em>를 찾아요</h1></div>
+      <div class="waves wave-a"></div><div class="waves wave-b"></div>
+      <button class="creature c1" data-name="흰동가리" data-icon="🐠" data-desc="따뜻한 연안의 말미잘 곁에서 사는 작고 용감한 물고기예요."><i>🐠</i><span>흰동가리</span></button>
+      <button class="creature c2" data-name="바다거북" data-icon="🐢" data-desc="해초밭을 여행하는 바다의 오래된 항해사예요. 비닐은 먹이가 아니에요!"><i>🐢</i><span>바다거북</span></button>
+      <button class="creature c3" data-name="푸른불가사리" data-icon="⭐" data-desc="바위틈에서 발견되는 아름다운 극피동물 친구예요."><i>⭐</i><span>푸른불가사리</span></button>
+      <button class="radar" id="scanBtn"><span>⌁</span><b>탐험 시작</b></button>
+      <div class="map-chip">🌊 오늘의 파도 <b>잔잔</b></div>
+    </div>
+    <section class="panel top-panel"><div class="level"><div class="level-badge">8</div><div><b>파도 탐험가</b><small>다음 레벨까지 280 XP</small><i><em></em></i></div><strong>1,240 <small>XP</small></strong></div>
+      <div class="section-head"><h2>오늘의 블루 미션</h2><button data-tab="learn">전체 보기</button></div>
+      <article class="mission" id="missionCard"><div class="mission-icon">🧤</div><div><small>DAILY CLEAN-UP</small><b>해변에서 쓰레기 3개 줍기</b><span>완료하면 바다씨앗 50개 획득</span></div><strong id="missionCount">0/3</strong></article>
+    </section>
+  </section>
+
+  <section id="learn" class="screen scroll-screen">
+    <div class="page-title"><span>LEARN & PLAY</span><h1>바다를 알수록<br>더 가까워져요</h1></div>
+    <article class="quiz-card"><div class="quiz-top"><span>⚡ 오늘의 퀴즈</span><b>+ 30 씨앗</b></div><h2>플라스틱 빨대가 바다에서 완전히 분해되는 데 걸리는 시간은?</h2><div class="answers" id="answers"><button>약 5년</button><button>약 50년</button><button data-correct>약 200년 이상</button></div><p id="quizFeedback">정답을 골라 바다 지식을 채워보세요!</p></article>
+    <div class="section-head"><h2>나의 블루 도감</h2><button id="bookMore">12 / 48종</button></div>
+    <div class="book-grid"><article><i>🐠</i><b>흰동가리</b><small>산호초 · 보통</small></article><article><i>🐢</i><b>바다거북</b><small>보호종 · 희귀</small></article><article class="locked"><i>?</i><b>미발견 생물</b><small>해변에서 찾아보세요</small></article></div>
+    <div class="section-head"><h2>바다 한 조각</h2><button>더 보기</button></div>
+    <article class="weather"><div><span>🌤</span><b>광안리 바다 날씨</b><small>수온 24° · 파고 0.4m · 자외선 보통</small></div><strong>안전<br><em>좋음</em></strong></article>
+  </section>
+
+  <section id="community" class="screen scroll-screen">
+    <div class="page-title community-title"><span>BLUE COMMUNITY</span><h1>같은 바다를 좋아하는<br>친구들을 만나보세요</h1></div>
+    <div class="nearby"><div class="avatars"><i>🧑🏽</i><i>👩🏻</i><i>🧑🏻‍🦱</i></div><p>내 주변 <b>12명</b>의 바다 친구가 활동 중이에요</p><button id="friendBtn">친구 찾기</button></div>
+    <div class="section-head"><h2>함께할래요?</h2><button id="postBtn">＋ 모집하기</button></div>
+    <article class="post"><div class="post-user"><span>🏄🏻</span><div><b>민서의 파도일기</b><small>광안리 · 12분 전</small></div><button>팔로우</button></div><h3>토요일 아침 패들보드 같이 타요! 🏄</h3><p>초보도 환영해요. 강습 경험 있는 분과 함께 안전하게 즐겨요.</p><div class="post-meta"><span>📅 8월 2일 (토) 09:00</span><b>3 / 6명 참여</b></div><button class="join">참여 신청</button></article>
+    <article class="post second"><div class="post-user"><span>🧑🏻‍🔬</span><div><b>바다지킴이 윤</b><small>송정 · 38분 전</small></div><button>팔로우</button></div><h3>송정 해변 플로깅 크루 모집</h3><p>산책하며 해변도 깨끗하게 만들어요. 장갑과 봉투는 준비해 둘게요!</p><div class="post-meta"><span>📅 매주 일요일 16:00</span><b>8명 참여</b></div></article>
+  </section>
+
+  <section id="safety" class="screen scroll-screen">
+    <div class="page-title safety-title"><span>SAFE OCEAN MATCH</span><h1>나에게 꼭 맞는<br>바다 놀이를 찾아요</h1></div>
+    <article class="profile-card"><div class="profile-top"><span>🫧</span><div><b>나의 안전 프로필</b><small>정보를 바탕으로 추천해요</small></div><button id="editProfile">수정</button></div><div class="traits"><span>수영 · 초급</span><span>활동량 · 보통</span><span>선호 · 잔잔한 바다</span></div></article>
+    <div class="section-head"><h2>오늘의 추천 활동</h2><button>안전 기준 ⓘ</button></div>
+    <article class="activity recommended"><div class="activity-art snorkeling">🤿</div><div><span>BEST MATCH · 안전도 96%</span><h2>스노클링 체험</h2><p>얕은 수심의 잔잔한 해역에서 가이드와 함께라면 처음이어도 좋아요.</p><div class="tags"><i>초급 가능</i><i>수심 1~2m</i></div></div><button>자세히</button></article>
+    <article class="activity"><div class="activity-art kayak">🛶</div><div><span>안전도 88%</span><h2>해안 카약</h2><p>구명조끼를 꼭 착용하고, 바람이 약한 오전 시간에 즐겨요.</p><div class="tags"><i>동반 추천</i><i>파고 0.5m 이하</i></div></div><button>자세히</button></article>
+  </section>
+
+  <nav><button class="nav-btn active" data-tab="explore"><i>◉</i><span>탐험</span></button><button class="nav-btn" data-tab="learn"><i>▦</i><span>배움</span></button><button class="nav-btn" data-tab="community"><i>◌</i><span>커뮤니티</span></button><button class="nav-btn" data-tab="safety"><i>♡</i><span>안전 추천</span></button></nav>
+  <div id="modal" class="modal hidden"><div class="modal-card"><button class="close">×</button><div id="modalIcon" class="modal-icon">🐠</div><span>새로운 발견!</span><h2 id="modalName">흰동가리</h2><p id="modalDesc"></p><button class="main-action" id="collectBtn">도감에 담기 +20 XP</button></div></div>
+  <div id="toast" class="toast hidden"></div>
+</main><script src="script.js"></script>
+</body></html>
+

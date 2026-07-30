@@ -1,0 +1,9 @@
+.tools/
+repo-data/
+work/
+site-package.tar.gz
+node_modules/
+dist/.openai/
+.env
+.env.*
+*.log

@@ -8,6 +8,8 @@
   const result = document.getElementById('aiAnalysisResult');
   const error = document.getElementById('aiAnalysisError');
   const analyzeAgain = document.getElementById('aiAnalyzeAgain');
+  const galleryButton = document.getElementById('aiGalleryButton');
+  const cameraButton = document.getElementById('aiCameraButton');
 
   if (!galleryInput || !cameraInput) return;
 
@@ -145,6 +147,8 @@
 
   galleryInput.addEventListener('change', (event) => analyze(event.target.files[0]));
   cameraInput.addEventListener('change', (event) => analyze(event.target.files[0]));
+  galleryButton.addEventListener('click', () => galleryInput.click());
+  cameraButton.addEventListener('click', () => cameraInput.click());
   analyzeAgain.addEventListener('click', () => {
     preview.removeAttribute('src');
     preview.classList.add('hidden');

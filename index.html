@@ -6,6 +6,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="ai-photo.css">
 </head>
 <body>
 <main class="phone">
@@ -29,6 +30,44 @@
 
   <section id="learn" class="screen scroll-screen">
     <div class="page-title"><span>LEARN & PLAY</span><h1>바다를 알수록<br>더 가까워져요</h1></div>
+    <article class="ai-lens" aria-labelledby="aiLensTitle">
+      <div class="ai-lens-heading">
+        <div class="ai-lens-icon" aria-hidden="true">✦</div>
+        <div>
+          <span>AI OCEAN LENS</span>
+          <h2 id="aiLensTitle">사진 속 대상을 AI로 알아보세요</h2>
+          <p>해양 생물과 해변에서 발견한 대상을 촬영하면 이름과 특징, 관찰 방법을 알려드려요.</p>
+        </div>
+      </div>
+      <div class="ai-upload-zone" id="aiUploadZone">
+        <img id="aiPhotoPreview" class="hidden" alt="분석할 사진 미리보기">
+        <div id="aiUploadPrompt">
+          <b>사진 한 장으로 바로 탐색</b>
+          <small>대상이 크고 선명하게 보이는 사진이 좋아요.</small>
+        </div>
+      </div>
+      <div class="ai-upload-actions">
+        <label for="aiGalleryInput">사진 선택</label>
+        <label class="camera" for="aiCameraInput">카메라 촬영</label>
+      </div>
+      <input id="aiGalleryInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+      <input id="aiCameraInput" type="file" accept="image/*" capture="environment" hidden>
+      <div id="aiAnalysisStatus" class="ai-status hidden" role="status" aria-live="polite">
+        <i aria-hidden="true"></i>
+        <div><b>AI가 사진을 살펴보고 있어요</b><small>대상의 형태와 특징을 분석하는 중이에요.</small></div>
+      </div>
+      <section id="aiAnalysisResult" class="ai-result hidden" aria-live="polite">
+        <div class="ai-result-top">
+          <div><span id="aiCategory">분석 결과</span><h3 id="aiName">대상 이름</h3><em id="aiLatin"></em></div>
+          <strong id="aiConfidence">0%</strong>
+        </div>
+        <p id="aiDescription"></p>
+        <div class="ai-guide"><b>관찰 가이드</b><p id="aiGuide"></p></div>
+        <button id="aiAnalyzeAgain" type="button">다른 사진 분석하기</button>
+      </section>
+      <p id="aiAnalysisError" class="ai-error hidden" role="alert"></p>
+      <p class="ai-disclaimer">AI 결과는 참고용이며, 위험하거나 보호가 필요한 생물은 만지지 말고 전문가에게 확인하세요.</p>
+    </article>
     <article class="quiz-card"><div class="quiz-top"><span>⚡ 오늘의 퀴즈</span><b>+ 30 씨앗</b></div><h2>플라스틱 빨대가 바다에서 완전히 분해되는 데 걸리는 시간은?</h2><div class="answers" id="answers"><button>약 5년</button><button>약 50년</button><button data-correct>약 200년 이상</button></div><p id="quizFeedback">정답을 골라 바다 지식을 채워보세요!</p></article>
     <div class="section-head"><h2>나의 블루 도감</h2><button id="bookMore">12 / 48종</button></div>
     <div class="book-grid"><article><i>🐠</i><b>흰동가리</b><small>산호초 · 보통</small></article><article><i>🐢</i><b>바다거북</b><small>보호종 · 희귀</small></article><article class="locked"><i>?</i><b>미발견 생물</b><small>해변에서 찾아보세요</small></article></div>
@@ -55,6 +94,5 @@
   <nav><button class="nav-btn active" data-tab="explore"><i>◉</i><span>탐험</span></button><button class="nav-btn" data-tab="learn"><i>▦</i><span>배움</span></button><button class="nav-btn" data-tab="community"><i>◌</i><span>커뮤니티</span></button><button class="nav-btn" data-tab="safety"><i>♡</i><span>안전 추천</span></button></nav>
   <div id="modal" class="modal hidden"><div class="modal-card"><button class="close">×</button><div id="modalIcon" class="modal-icon">🐠</div><span>새로운 발견!</span><h2 id="modalName">흰동가리</h2><p id="modalDesc"></p><button class="main-action" id="collectBtn">도감에 담기 +20 XP</button></div></div>
   <div id="toast" class="toast hidden"></div>
-</main><script src="script.js"></script>
+</main><script src="script.js"></script><script src="ai-photo.js"></script>
 </body></html>
-

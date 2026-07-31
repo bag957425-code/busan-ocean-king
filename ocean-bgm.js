@@ -166,45 +166,140 @@
     noiseSource.stop(start + 0.19);
   }
 
-  function scheduleStartSegment(start) {
-    const chords = [
-      [146.83, 220, 293.66],
-      [130.81, 196, 261.63],
-      [174.61, 220, 349.23],
-      [110, 164.81, 220]
-    ];
-    chords.forEach((chord, chordIndex) => {
-      const chordStart = start + chordIndex * 4;
-      chord.forEach((frequency, noteIndex) => {
-        note(frequency, chordStart, 4.8, noteIndex === 0 ? 'triangle' : 'sine', noteIndex === 0 ? 0.035 : 0.021);
-      });
-      const melody = [chord[1] * 2, chord[2] * 2, chord[1] * 2.25, chord[2] * 1.5];
-      melody.forEach((frequency, step) => note(frequency, chordStart + 0.45 + step * 0.78, 1.25, 'triangle', 0.025));
+  function steelPan(frequency, start, duration = 0.72, volume = 0.032) {
+    [1, 2.01, 3.96].forEach((ratio, index) => {
+      const oscillator = trackNode(context.createOscillator());
+      const gain = context.createGain();
+      const filter = context.createBiquadFilter();
+      oscillator.type = index === 0 ? 'sine' : 'triangle';
+      oscillator.frequency.setValueAtTime(frequency * ratio, start);
+      oscillator.detune.setValueAtTime(index * 3, start);
+      filter.type = 'bandpass';
+      filter.frequency.value = Math.min(5200, frequency * ratio * 1.5);
+      filter.Q.value = index === 0 ? 0.7 : 2.2;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(volume / (index + 1.4), start + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration * (index === 0 ? 1 : 0.62));
+      oscillator.connect(filter).connect(gain).connect(music);
+      oscillator.start(start);
+      oscillator.stop(start + duration + 0.03);
     });
-    seagull(start + 4.8);
-    seagull(start + 5.35, 140);
-    shipHorn(start + 9.1);
-    seagull(start + 13.4, -90);
+  }
+
+  function marimba(frequency, start, duration = 0.42, volume = 0.026) {
+    const oscillator = trackNode(context.createOscillator());
+    const gain = context.createGain();
+    const filter = context.createBiquadFilter();
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(frequency, start);
+    oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.992, start + duration);
+    filter.type = 'lowpass';
+    filter.frequency.value = 1600;
+    gain.gain.setValueAtTime(volume, start);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    oscillator.connect(filter).connect(gain).connect(music);
+    oscillator.start(start);
+    oscillator.stop(start + duration + 0.02);
+  }
+
+  function clave(start, accent = false) {
+    const oscillator = trackNode(context.createOscillator());
+    const gain = context.createGain();
+    const filter = context.createBiquadFilter();
+    oscillator.type = 'square';
+    oscillator.frequency.setValueAtTime(accent ? 2250 : 1780, start);
+    filter.type = 'bandpass';
+    filter.frequency.value = accent ? 2400 : 1900;
+    filter.Q.value = 5.5;
+    gain.gain.setValueAtTime(accent ? 0.022 : 0.015, start);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.065);
+    oscillator.connect(filter).connect(gain).connect(effects);
+    oscillator.start(start);
+    oscillator.stop(start + 0.07);
+  }
+
+  function shaker(start, volume = 0.013) {
+    const buffer = context.createBuffer(1, Math.round(context.sampleRate * 0.09), context.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let index = 0; index < data.length; index += 1) {
+      const envelope = Math.pow(1 - index / data.length, 2);
+      data[index] = (Math.random() * 2 - 1) * envelope;
+    }
+    const source = trackNode(context.createBufferSource());
+    const filter = context.createBiquadFilter();
+    const gain = context.createGain();
+    source.buffer = buffer;
+    filter.type = 'highpass';
+    filter.frequency.value = 4200;
+    gain.gain.setValueAtTime(volume, start);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.09);
+    source.connect(filter).connect(gain).connect(effects);
+    source.start(start);
+    source.stop(start + 0.095);
+  }
+
+  function conga(start, high = false, volume = 0.055) {
+    const oscillator = trackNode(context.createOscillator());
+    const gain = context.createGain();
+    const filter = context.createBiquadFilter();
+    const frequency = high ? 235 : 165;
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(frequency, start);
+    oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.58, start + 0.23);
+    filter.type = 'lowpass';
+    filter.frequency.value = 650;
+    gain.gain.setValueAtTime(volume, start);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.28);
+    oscillator.connect(filter).connect(gain).connect(effects);
+    oscillator.start(start);
+    oscillator.stop(start + 0.3);
+  }
+
+  function scheduleStartSegment(start) {
+    const bars = [
+      { bass: 130.81, chord: [261.63, 329.63, 392], melody: [523.25, 659.25, 587.33, 783.99] },
+      { bass: 174.61, chord: [261.63, 349.23, 440], melody: [698.46, 659.25, 523.25, 440] },
+      { bass: 196, chord: [293.66, 392, 493.88], melody: [587.33, 783.99, 659.25, 880] },
+      { bass: 164.81, chord: [246.94, 329.63, 392], melody: [659.25, 587.33, 493.88, 523.25] }
+    ];
+    bars.forEach((bar, barIndex) => {
+      const barStart = start + barIndex * 4;
+      note(bar.bass, barStart, 4.25, 'triangle', 0.027);
+      bar.chord.forEach((frequency, index) => note(frequency, barStart, 4.15, 'sine', 0.012 / (index + 1)));
+      [0.35, 1.15, 2.05, 3.1].forEach((offset, step) => steelPan(bar.melody[step], barStart + offset, 0.68, 0.034));
+      [0.75, 1.75, 2.75, 3.55].forEach((offset, step) => marimba(step % 2 ? bar.bass * 2 : bar.bass * 1.5, barStart + offset));
+      [0, 0.75, 1.75, 2.5, 3.25].forEach((offset, step) => clave(barStart + offset, step === 0));
+      for (let beat = 0; beat < 8; beat += 1) shaker(barStart + beat * 0.5, beat % 2 ? 0.01 : 0.014);
+      conga(barStart, false, 0.046);
+      conga(barStart + 1.5, true, 0.038);
+      conga(barStart + 3, false, 0.048);
+    });
+    seagull(start + 5.1);
+    seagull(start + 5.62, 120);
+    shipHorn(start + 10.1);
+    seagull(start + 14.2, -80);
   }
 
   function schedulePlaySegment(start) {
-    const chords = [
-      [146.83, 174.61, 220],
-      [130.81, 164.81, 196],
-      [116.54, 146.83, 174.61],
-      [110, 138.59, 164.81]
+    const bars = [
+      { bass: 146.83, chord: [174.61, 220, 293.66], motif: [587.33, 523.25, 440, 523.25] },
+      { bass: 130.81, chord: [164.81, 196, 261.63], motif: [523.25, 440, 392, 493.88] },
+      { bass: 116.54, chord: [146.83, 174.61, 233.08], motif: [466.16, 523.25, 440, 349.23] },
+      { bass: 110, chord: [138.59, 164.81, 220], motif: [440, 415.3, 329.63, 392] }
     ];
-    chords.forEach((chord, chordIndex) => {
-      const chordStart = start + chordIndex * 4;
-      chord.forEach((frequency, noteIndex) => {
-        note(frequency, chordStart, 4.45, noteIndex === 0 ? 'sawtooth' : 'triangle', noteIndex === 0 ? 0.022 : 0.017);
-      });
-      [0, 1.5, 3].forEach((offset, beatIndex) => drum(chordStart + offset, beatIndex === 0));
-      const pulse = [chord[1] * 2, chord[0] * 2, chord[2] * 1.5, chord[1] * 2.25];
-      pulse.forEach((frequency, step) => note(frequency, chordStart + 0.55 + step * 0.74, 0.72, 'triangle', 0.021));
+    bars.forEach((bar, barIndex) => {
+      const barStart = start + barIndex * 4;
+      note(bar.bass, barStart, 4.3, 'sawtooth', 0.018);
+      bar.chord.forEach((frequency, index) => note(frequency, barStart, 4.1, 'triangle', 0.011 / (index + 1)));
+      [0.25, 1.05, 2.2, 3.05].forEach((offset, step) => steelPan(bar.motif[step], barStart + offset, 0.48, 0.024));
+      [0, 1, 2.5, 3.5].forEach((offset, step) => conga(barStart + offset, step % 2 === 1, step === 0 ? 0.068 : 0.052));
+      [0, 0.5, 1.5, 2.25, 3, 3.5].forEach((offset, step) => clave(barStart + offset, step === 0));
+      [0, 2].forEach((offset) => drum(barStart + offset, offset === 0));
+      for (let beat = 0; beat < 12; beat += 1) shaker(barStart + beat / 3, beat % 3 === 0 ? 0.017 : 0.011);
+      [0.7, 1.7, 2.7, 3.7].forEach((offset, step) => marimba(step % 2 ? bar.bass * 2 : bar.bass * 1.5, barStart + offset, 0.3, 0.021));
     });
-    drum(start + 14.7, true);
-    shipHorn(start + 11.9);
+    drum(start + 15.55, true);
+    shipHorn(start + 12.2);
   }
 
   function scheduleSegment(start) {

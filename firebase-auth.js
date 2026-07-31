@@ -27,6 +27,8 @@
   const serverTime = () => firebase.firestore.FieldValue.serverTimestamp();
   const currentUser = () => auth.currentUser;
   let profileCache = null;
+  let presenceTimer = null;
+  let presenceCleanup = null;
 
   const requireUser = () => {
     const user = currentUser();
@@ -49,6 +51,49 @@
     if (difference < 3600000) return `${Math.floor(difference / 60000)}분 전`;
     if (difference < 86400000) return `${Math.floor(difference / 3600000)}시간 전`;
     return timestamp.toDate().toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+  }
+
+  function withLivePresence(profile) {
+    const lastSeen = profile?.lastSeen?.toMillis?.() || 0;
+    const recentlyActive = lastSeen > Date.now() - 2 * 60 * 1000;
+    return { ...profile, online: Boolean(profile?.online && recentlyActive) };
+  }
+
+  function stopPresence() {
+    clearInterval(presenceTimer);
+    presenceTimer = null;
+    if (presenceCleanup) presenceCleanup();
+    presenceCleanup = null;
+  }
+
+  function startPresence(user) {
+    stopPresence();
+    const reference = db.collection('profiles').doc(user.uid);
+    const sync = (forcedState) => {
+      if (currentUser()?.uid !== user.uid) return;
+      const online = typeof forcedState === 'boolean'
+        ? forcedState
+        : navigator.onLine && document.visibilityState === 'visible';
+      reference.set({ online, lastSeen: serverTime() }, { merge: true }).catch(() => {});
+      if (profileCache) profileCache.online = online;
+      dispatch('ocean-presence', { online });
+    };
+    const visibilityHandler = () => sync();
+    const onlineHandler = () => sync();
+    const offlineHandler = () => sync(false);
+    const pageHideHandler = () => sync(false);
+    document.addEventListener('visibilitychange', visibilityHandler);
+    window.addEventListener('online', onlineHandler);
+    window.addEventListener('offline', offlineHandler);
+    window.addEventListener('pagehide', pageHideHandler);
+    presenceCleanup = () => {
+      document.removeEventListener('visibilitychange', visibilityHandler);
+      window.removeEventListener('online', onlineHandler);
+      window.removeEventListener('offline', offlineHandler);
+      window.removeEventListener('pagehide', pageHideHandler);
+    };
+    sync();
+    presenceTimer = setInterval(() => sync(), 45 * 1000);
   }
 
   async function ensureProfile(user) {
@@ -159,6 +204,7 @@
 
     async signOut() {
       const user = currentUser();
+      stopPresence();
       if (user) {
         await db.collection('profiles').doc(user.uid).set({ online: false, lastSeen: serverTime() }, { merge: true }).catch(() => {});
       }
@@ -208,7 +254,7 @@
       requireUser();
       const snapshot = await db.collection('profiles').doc(uid).get();
       if (!snapshot.exists) throw new Error('프로필을 찾을 수 없어요.');
-      return { uid: snapshot.id, ...snapshot.data() };
+      return withLivePresence({ uid: snapshot.id, ...snapshot.data() });
     },
 
     async saveProgress(progress) {
@@ -333,7 +379,7 @@
       const received = new Map(receivedSnapshot.docs.filter((document) => document.data().status === 'pending').map((document) => [document.data().fromUid, 'received']));
       const friends = new Set(friendsSnapshot.docs.flatMap((document) => document.data().members || []).filter((uid) => uid !== user.uid));
       return profilesSnapshot.docs
-        .map((document) => ({ uid: document.id, ...document.data() }))
+        .map((document) => withLivePresence({ uid: document.id, ...document.data() }))
         .filter((profile) => profile.uid !== user.uid && profile.profileComplete)
         .map((profile) => ({
           ...profile,
@@ -398,7 +444,7 @@
       const uids = friendships.docs.flatMap((document) => document.data().members || []).filter((uid) => uid !== user.uid);
       const unique = [...new Set(uids)];
       const profiles = await Promise.all(unique.map((uid) => db.collection('profiles').doc(uid).get()));
-      return profiles.filter((document) => document.exists).map((document) => ({ uid: document.id, ...document.data() }));
+      return profiles.filter((document) => document.exists).map((document) => withLivePresence({ uid: document.id, ...document.data() }));
     },
 
     subscribeMessages(friendUid, onMessages) {
@@ -461,11 +507,13 @@
 
   auth.onAuthStateChanged(async (user) => {
     if (!user) {
+      stopPresence();
       dispatch('ocean-auth', { user: null });
       return;
     }
     try {
       const profile = await ensureProfile(user);
+      startPresence(user);
       dispatch('ocean-auth', {
         user: {
           uid: user.uid,

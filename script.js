@@ -42,6 +42,7 @@
     trash: 0,
     collection: new Map(),
     creatures: new Map(),
+    movementTimer: null,
     difficulty: 'beginner',
     xpBuffs: [],
     user: null,
@@ -136,11 +137,8 @@
     $('#difficultySelect').value = state.difficulty;
     $('#difficultySummary').textContent = `${settings.name} · 포획 원 ${settings.zone}px · 동시 쓰레기 목표 ${settings.trashTarget}개`;
     [...state.creatures.keys()].slice(settings.maxEntities).forEach((id) => removeCreature(id));
-    state.creatures.forEach((entry) => {
-      clearInterval(entry.moveTimer);
-      entry.moveTimer = setInterval(() => moveCreature(entry), settings.moveMin + Math.random() * settings.moveRange);
-    });
     updateTargets();
+    restartMovementScheduler();
     if (persist) saveProgress();
   }
 
@@ -211,15 +209,42 @@
     updateTargets();
   }
 
+  function placeCreature(entry) {
+    const position = randomPosition();
+    entry.x = position.x;
+    entry.y = position.y;
+    entry.element.style.transition = 'none';
+    entry.element.style.transform = `translate(${position.x / 100 * $('#creatureLayer').clientWidth}px, ${position.y / 100 * $('#creatureLayer').clientHeight}px)`;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (entry.element.isConnected) entry.element.style.transition = '';
+      });
+    });
+  }
+
+  function restartMovementScheduler() {
+    clearTimeout(state.movementTimer);
+    const schedule = () => {
+      const settings = difficultySettings();
+      state.movementTimer = setTimeout(() => {
+        const entries = [...state.creatures.values()].filter((entry) => entry.element.isConnected);
+        if (!$('#playScreen').classList.contains('hidden') && entries.length) {
+          moveCreature(entries[Math.floor(Math.random() * entries.length)]);
+        }
+        schedule();
+      }, settings.moveMin + Math.random() * settings.moveRange);
+    };
+    schedule();
+  }
+
   function removeCreature(id, caught = false) {
     const entry = state.creatures.get(id);
     if (!entry) return;
-    clearInterval(entry.moveTimer);
     clearTimeout(entry.lifeTimer);
     entry.element.classList.add('vanish');
     setTimeout(() => entry.element.remove(), 420);
     state.creatures.delete(id);
-    if (!caught) $('#arenaStatus').textContent = `${entry.species.name}이(가) 시야에서 사라졌어요.`;
+    if (!caught) $('#arenaStatus').textContent = '??? 유닛이 시야에서 사라졌어요.';
   }
 
   function spawnCreature() {
@@ -245,48 +270,43 @@
     element.type = 'button';
     element.className = `wild-creature ${selected.kind === 'waste' ? 'waste-creature' : selected.kind === 'bonus' ? 'bonus-creature' : ''}`;
     element.dataset.creatureId = id;
-    element.setAttribute('aria-label', `${selected.name}, 움직이는 ${selected.kind === 'waste' ? '해양 쓰레기' : selected.kind === 'bonus' ? '보너스 대상' : '해양 생물'}`);
-    element.innerHTML = `<i>${selected.icon}</i><small>${selected.name}</small>`;
+    element.setAttribute('aria-label', `정체불명의 움직이는 ${selected.kind === 'waste' ? '해양 쓰레기' : selected.kind === 'bonus' ? '보너스 대상' : '해양 생물'}`);
+    element.innerHTML = `<i>${selected.icon}</i><small>???</small>`;
     $('#creatureLayer').append(element);
     const entry = { id, species: selected, element, x: 0, y: 0 };
     state.creatures.set(id, entry);
-    moveCreature(entry);
-    entry.moveTimer = setInterval(() => moveCreature(entry), settings.moveMin + Math.random() * settings.moveRange);
+    placeCreature(entry);
     entry.lifeTimer = setTimeout(() => removeCreature(id), 10000 + Math.random() * 6000);
     element.addEventListener('click', async () => {
       element.classList.add('target');
       setTimeout(() => element.classList.remove('target'), 900);
       if (selected.kind === 'waste') {
-        $('#arenaStatus').textContent = `${selected.name} 실제 해양 쓰레기 사진을 찾는 중...`;
+        $('#arenaStatus').textContent = '??? 쓰레기의 실제 현장 사진을 찾는 중...';
         try {
           const photo = await window.OceanAI.nextWastePhoto(selected);
-          $('i', element).innerHTML = `<img src="${escapeHtml(photo.url)}" alt="바다에서 발견된 ${escapeHtml(selected.name)} 실제 사진">`;
+          $('i', element).innerHTML = `<img src="${escapeHtml(photo.url)}" alt="바다에서 발견된 정체불명 쓰레기 실제 사진">`;
           element.title = `${photo.credit || 'Wikimedia Commons'} · 실제 해양 쓰레기 현장 사진`;
-          $('#arenaStatus').textContent = `${selected.name}: 아이콘을 다시 누르면 다른 실제 현장 사진이 나와요.`;
+          $('#arenaStatus').textContent = '???: 아이콘을 다시 누르면 다른 실제 현장 사진이 나와요.';
         } catch (_) {
-          $('#arenaStatus').textContent = `${selected.name}: 포획 원에 들어오면 잡아서 바다를 정화하세요!`;
+          $('#arenaStatus').textContent = '???: 포획 원에 들어오면 잡아서 바다를 정화하세요!';
         }
         return;
       }
       if (selected.kind === 'bonus') {
-        $('#arenaStatus').textContent = '신비한 인어예요! 포획하면 5분 동안 XP 효과가 중첩돼요.';
+        $('#arenaStatus').textContent = '??? 보너스 유닛이에요! 포획하면 특별한 효과를 확인할 수 있어요.';
         return;
       }
-      $('#arenaStatus').textContent = `${selected.name} 실제 사진을 찾는 중...`;
+      $('#arenaStatus').textContent = '??? 생물의 실제 사진을 찾는 중...';
       try {
         const photo = await window.OceanAI.nextSpeciesPhoto(selected);
-        $('i', element).innerHTML = `<img src="${escapeHtml(photo.url)}" alt="${escapeHtml(selected.name)} 실제 사진">`;
+        $('i', element).innerHTML = `<img src="${escapeHtml(photo.url)}" alt="정체불명 해양 생물 실제 사진">`;
         element.title = `${photo.credit || 'iNaturalist 관찰자'} · 살아있는 개체 관찰 사진`;
-        $('#arenaStatus').textContent = `${selected.name}: 아이콘을 다시 누르면 다른 실제 사진이 나와요.`;
+        $('#arenaStatus').textContent = '???: 아이콘을 다시 누르면 다른 실제 사진이 나와요.';
       } catch (_) {
-        $('#arenaStatus').textContent = `${selected.name}: 포획 원 안으로 들어올 때 버튼을 누르세요!`;
+        $('#arenaStatus').textContent = '???: 포획 원 안으로 들어올 때 버튼을 누르세요!';
       }
     });
-    $('#arenaStatus').textContent = selected.kind === 'waste'
-      ? `${selected.name} 발견! 포획해서 바다를 정화하세요.`
-      : selected.kind === 'bonus'
-        ? '🧜‍♀️ 인어 출현! 놓치기 전에 포획하세요.'
-        : `${selected.name} 출현! 움직임을 잘 살펴보세요.`;
+    $('#arenaStatus').textContent = '??? 유닛 출현! 정체는 포획한 뒤 확인할 수 있어요.';
     updateTargets();
   }
 
@@ -542,7 +562,7 @@
       <section class="user-profile-card">
         <div class="profile-avatar">${escapeHtml(profile.avatar || '🌊')}</div>
         <h2>${escapeHtml(profile.nickname || profile.displayName || '바다 탐험가')}</h2>
-        <span>${profile.online ? '● 온라인' : '최근 활동한 탐험가'}</span>
+        <span>${profile.online ? '● 온라인' : '○ 오프라인'}</span>
         <dl>
           <div><dt>거주지</dt><dd>${escapeHtml(profile.residence || profile.location || '미등록')}</dd></div>
           <div><dt>나이</dt><dd>${profile.age ? `${Number(profile.age)}세` : '미등록'}</dd></div>
@@ -660,7 +680,7 @@
       list.innerHTML = people.map((person) => {
         const labels = { none: '친구 요청', sent: '요청 보냄', received: '요청 수락', friends: '친구 삭제' };
         return `<article class="profile-row">
-          <button class="profile-link" type="button" data-profile="${escapeHtml(person.uid)}"><span>${escapeHtml(person.avatar || '🌊')}</span><div><b>${escapeHtml(person.nickname || person.displayName || '바다 탐험가')}</b><small>${escapeHtml(person.residence || person.location || '부산')} · ${person.age ? `${Number(person.age)}세 · ` : ''}${person.online ? '온라인' : '최근 활동'}</small></div></button>
+          <button class="profile-link" type="button" data-profile="${escapeHtml(person.uid)}"><span>${escapeHtml(person.avatar || '🌊')}</span><div><b>${escapeHtml(person.nickname || person.displayName || '바다 탐험가')}</b><small>${escapeHtml(person.residence || person.location || '부산')} · ${person.age ? `${Number(person.age)}세 · ` : ''}${person.online ? '● 온라인' : '○ 오프라인'}</small></div></button>
           <button type="button" data-person="${escapeHtml(person.uid)}" data-relation="${person.relation}" ${person.relation === 'sent' ? 'disabled' : ''}>${labels[person.relation] || labels.none}</button>
         </article>`;
       }).join('');
@@ -722,7 +742,7 @@
       people.innerHTML = '<button class="chat-person" type="button">친구 없음</button>';
       return;
     }
-    people.innerHTML = friends.map((friend) => `<button class="chat-person" type="button" data-chat-user="${escapeHtml(friend.uid)}">${escapeHtml(friend.nickname || friend.displayName || '바다 친구')}</button>`).join('');
+    people.innerHTML = friends.map((friend) => `<button class="chat-person" type="button" data-chat-user="${escapeHtml(friend.uid)}">${friend.online ? '🟢' : '⚪'} ${escapeHtml(friend.nickname || friend.displayName || '바다 친구')}</button>`).join('');
     let activeFriend = null;
     $$('[data-chat-user]', people).forEach((button) => button.addEventListener('click', () => {
       $$('[data-chat-user]', people).forEach((item) => item.classList.remove('active'));
@@ -880,8 +900,9 @@
   function updateAuthUI(user) {
     state.user = user;
     const connected = Boolean(user);
-    $('#cloudState').textContent = connected ? (user.displayName || '저장됨') : '체험 모드';
-    $('#cloudState').classList.toggle('online', connected);
+    const online = connected && navigator.onLine && document.visibilityState === 'visible';
+    $('#cloudState').textContent = connected ? (online ? '온라인' : '오프라인') : '체험 모드';
+    $('#cloudState').classList.toggle('online', online);
     $('#authButton').textContent = '👤';
     $('#authButton').title = connected ? '내 프로필' : 'Google 로그인';
     $('#authBanner').classList.toggle('connected', connected);
@@ -1087,6 +1108,12 @@
   });
 
   window.addEventListener('ocean-auth', (event) => updateAuthUI(event.detail?.user || null));
+  window.addEventListener('ocean-presence', (event) => {
+    if (!state.user) return;
+    const online = Boolean(event.detail?.online);
+    $('#cloudState').textContent = online ? '온라인' : '오프라인';
+    $('#cloudState').classList.toggle('online', online);
+  });
   window.addEventListener('ocean-profile-required', (event) => openProfileEditor(event.detail?.profile || null, true));
   window.addEventListener('ocean-progress-loaded', (event) => applyCloudProgress(event.detail));
   window.addEventListener('ocean-cloud-error', (event) => toast(event.detail?.message || 'Firebase 연결을 확인해 주세요.'));

@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="ai-photo.css">
   <link rel="stylesheet" href="ocean-ai.css">
+  <link rel="stylesheet" href="social-features.css">
 </head>
 <body>
   <main class="phone">
@@ -35,6 +36,9 @@
         </button>
         <div class="header-actions">
           <span class="cloud-state" id="cloudState" title="저장 상태">체험 모드</span>
+          <button id="notificationButton" class="notification-button" type="button" aria-label="알림">
+            🔔<b id="notificationBadge" class="hidden">0</b>
+          </button>
           <button id="authButton" class="profile-button" type="button" aria-label="로그인">👤</button>
         </div>
       </header>
@@ -68,7 +72,7 @@
           <article class="mission" id="missionCard">
             <div class="mission-icon">🧤</div>
             <div><small>DAILY CLEAN-UP</small><b>해변 쓰레기 사진 인증하기</b><span>인증할 때마다 XP와 씨앗 획득</span></div>
-            <strong id="missionCount">0/3</strong>
+            <strong id="missionCount">0/5</strong>
           </article>
           <label class="trash-proof" for="trashFile">📷 쓰레기 사진 스캔하기</label>
           <input id="trashFile" type="file" accept="image/*" capture="environment" hidden>

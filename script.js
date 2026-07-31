@@ -2,6 +2,7 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const XP_GOAL = 300;
+  const TRASH_GOAL = 5;
 
   const species = [
     { id: 'mackerel', name: '고등어', latin: 'Scomber japonicus', icon: '🐟', rarity: '흔함', habitat: '부산 연안과 외해', facts: '고등어는 부산을 대표하는 회유성 어류예요. 빠르게 헤엄치며 플랑크톤과 작은 물고기를 먹고 무리를 지어 이동해요.', guide: '부산공동어시장은 전국 고등어 유통의 중심지로 알려져 있어요.' },
@@ -29,7 +30,12 @@
     quizDone: false,
     postsUnsubscribe: null,
     chatUnsubscribe: null,
+    commentsUnsubscribe: null,
+    notificationUnsubscribe: null,
+    notifications: [],
+    notificationsReady: false,
     profiles: [],
+    posts: [],
     spawnSpecies: [...species],
     location: null
   };
@@ -96,6 +102,7 @@
 
   function openDialog(title, kicker, body, className = '') {
     const overlay = document.createElement('div');
+    const cleanups = [];
     overlay.className = 'dialog-overlay';
     overlay.innerHTML = `
       <section class="dialog-card ${className}" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
@@ -104,16 +111,13 @@
       </section>`;
     $('#dialogLayer').append(overlay);
     const close = () => {
-      if (state.chatUnsubscribe) {
-        state.chatUnsubscribe();
-        state.chatUnsubscribe = null;
-      }
+      cleanups.splice(0).forEach((cleanup) => cleanup());
       overlay.remove();
     };
     $('.dialog-close', overlay).addEventListener('click', close);
     overlay.addEventListener('click', (event) => { if (event.target === overlay) close(); });
     setTimeout(() => $('.dialog-close', overlay).focus(), 0);
-    return { overlay, body: $('.dialog-body', overlay), close };
+    return { overlay, body: $('.dialog-body', overlay), close, addCleanup: (cleanup) => cleanups.push(cleanup) };
   }
 
   function randomPosition() {
@@ -165,6 +169,7 @@
       try {
         const photo = await window.OceanAI.nextSpeciesPhoto(selected);
         $('i', element).innerHTML = `<img src="${escapeHtml(photo.url)}" alt="${escapeHtml(selected.name)} 실제 사진">`;
+        element.title = `${photo.credit || 'iNaturalist 관찰자'} · 살아있는 개체 관찰 사진`;
         $('#arenaStatus').textContent = `${selected.name}: 아이콘을 다시 누르면 다른 실제 사진이 나와요.`;
       } catch (_) {
         $('#arenaStatus').textContent = `${selected.name}: 포획 원 안으로 들어올 때 버튼을 누르세요!`;
@@ -213,6 +218,7 @@
     const dialog = openDialog(isNew ? '새로운 생물 발견!' : '다시 만난 바다 친구!', 'CAPTURE SUCCESS', `
       <div class="caught-card">
         <button class="caught-icon photo-swap" type="button" aria-label="${escapeHtml(found.name)} 실제 사진 바꾸기">${found.icon}</button>
+        <a class="photo-credit hidden" target="_blank" rel="noopener noreferrer"></a>
         <h2>${found.name}</h2>
         <span class="reward">${isNew ? '+80 XP · 도감 신규 등록' : '+25 XP · 관찰 보너스'}</span>
         <p>${found.facts}</p>
@@ -220,12 +226,16 @@
         <button class="dialog-primary caught-confirm" type="button">도감 확인하기</button>
       </div>`, 'caught-dialog');
     const caughtIcon = $('.caught-icon', dialog.body);
+    const caughtCredit = $('.photo-credit', dialog.body);
     const swapCaughtPhoto = async () => {
       caughtIcon.classList.add('loading-photo');
       try {
         const photo = await window.OceanAI.nextSpeciesPhoto(found);
         caughtIcon.innerHTML = `<img src="${escapeHtml(photo.url)}" alt="${escapeHtml(found.name)} 실제 사진">`;
         caughtIcon.title = '누르면 다른 실제 사진';
+        caughtCredit.href = photo.source;
+        caughtCredit.textContent = `사진: ${photo.credit || 'iNaturalist 관찰자'} · 관찰 기록 보기`;
+        caughtCredit.classList.remove('hidden');
       } catch (_) {
         caughtIcon.textContent = found.icon;
       } finally {
@@ -255,7 +265,7 @@
         try {
           const photo = await window.OceanAI.nextSpeciesPhoto(item);
           thumb.innerHTML = `<img src="${escapeHtml(photo.url)}" alt="${escapeHtml(item.name)} 실제 사진">`;
-          thumb.title = '누르면 다른 실제 사진';
+          thumb.title = `${photo.credit || 'iNaturalist 관찰자'} · 살아있는 개체 관찰 사진 · 누르면 다른 사진`;
         } catch (_) {
           toast('실제 사진을 잠시 불러오지 못했어요.');
         } finally {
@@ -280,11 +290,13 @@
     const dialog = openDialog(item.name, `${item.rarity} · AI 생태 해설`, `
       <div class="species-detail">
         <button class="species-photo photo-swap loading-photo" type="button" aria-label="${escapeHtml(item.name)} 실제 사진 바꾸기">${item.icon}</button>
+        <a class="photo-credit hidden" target="_blank" rel="noopener noreferrer"></a>
         <h2>${escapeHtml(item.name)}</h2><em>${escapeHtml(item.latin || '')}</em>
         <div class="species-story"><p>AI가 실제 생태 정보를 탐색하고 있어요...</p></div>
         <div class="species-facts"><b>주요 서식지</b><br>${escapeHtml(item.habitat)}<br><br><b>안전한 관찰</b><br>${escapeHtml(item.guide)}</div>
       </div>`);
     const photoButton = $('.species-photo', dialog.body);
+    const photoCredit = $('.photo-credit', dialog.body);
     const story = $('.species-story', dialog.body);
     const swapPhoto = async () => {
       photoButton.classList.add('loading-photo');
@@ -292,6 +304,9 @@
         const photo = await window.OceanAI.nextSpeciesPhoto(item);
         photoButton.innerHTML = `<img src="${escapeHtml(photo.url)}" alt="${escapeHtml(item.name)} 실제 사진">`;
         photoButton.title = '누르면 다른 실제 사진';
+        photoCredit.href = photo.source;
+        photoCredit.textContent = `사진: ${photo.credit || 'iNaturalist 관찰자'} · 살아있는 개체 관찰 기록`;
+        photoCredit.classList.remove('hidden');
       } catch (_) {
         photoButton.textContent = item.icon;
       } finally {
@@ -335,6 +350,115 @@
     return false;
   }
 
+  function profileMarkup(profile, own = false) {
+    return `
+      <section class="user-profile-card">
+        <div class="profile-avatar">${escapeHtml(profile.avatar || '🌊')}</div>
+        <h2>${escapeHtml(profile.nickname || profile.displayName || '바다 탐험가')}</h2>
+        <span>${profile.online ? '● 온라인' : '최근 활동한 탐험가'}</span>
+        <dl>
+          <div><dt>거주지</dt><dd>${escapeHtml(profile.residence || profile.location || '미등록')}</dd></div>
+          <div><dt>나이</dt><dd>${profile.age ? `${Number(profile.age)}세` : '미등록'}</dd></div>
+          <div class="profile-bio"><dt>소개</dt><dd>${escapeHtml(profile.bio || '아직 소개가 없어요.')}</dd></div>
+        </dl>
+        ${own ? '<button class="dialog-primary edit-my-profile" type="button">프로필 수정</button><button class="profile-logout" type="button">로그아웃</button>' : ''}
+      </section>`;
+  }
+
+  async function openProfileEditor(profile = null, required = false) {
+    if (!requireLogin('프로필 등록')) return;
+    const current = profile || await window.OceanCloud.getMyProfile().catch(() => ({}));
+    const dialog = openDialog(required ? '프로필을 완성해 주세요' : '내 프로필 수정', required ? 'WELCOME, OCEAN EXPLORER' : 'MY PROFILE', `
+      <div class="dialog-note">${required ? '닉네임, 거주지, 나이와 소개를 등록하면 다른 탐험가들과 소통할 수 있어요.' : '수정한 정보는 Firebase에 저장되고 다른 로그인 사용자에게 공개됩니다.'}</div>
+      <form class="dialog-form profile-form" id="profileForm">
+        <label>닉네임<input id="profileNickname" maxlength="24" minlength="2" required value="${escapeHtml(current.nickname || current.displayName || '')}" placeholder="예: 광안리돌고래"></label>
+        <label>거주지<input id="profileResidence" maxlength="40" required value="${escapeHtml(current.residence || current.location || '')}" placeholder="예: 부산광역시 수영구"></label>
+        <label>나이<input id="profileAge" type="number" min="1" max="120" required value="${current.age ? Number(current.age) : ''}" placeholder="나이"></label>
+        <label>기타 설명<textarea id="profileBio" maxlength="300" placeholder="좋아하는 해양 활동이나 나를 소개해 주세요.">${escapeHtml(current.bio || '')}</textarea></label>
+        <button class="dialog-primary" type="submit">프로필 저장하기</button>
+      </form>`);
+    $('#profileForm', dialog.body).addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = $('button[type="submit"]', event.currentTarget);
+      button.disabled = true;
+      try {
+        const saved = await window.OceanCloud.saveProfile({
+          nickname: $('#profileNickname', dialog.body).value,
+          residence: $('#profileResidence', dialog.body).value,
+          age: $('#profileAge', dialog.body).value,
+          bio: $('#profileBio', dialog.body).value
+        });
+        state.user.displayName = saved.nickname;
+        state.user.profile = saved;
+        updateAuthUI(state.user);
+        dialog.close();
+        toast('프로필이 Firebase에 저장되었어요.');
+      } catch (error) {
+        button.disabled = false;
+        toast(error.message || '프로필을 저장하지 못했어요.');
+      }
+    });
+  }
+
+  async function showUserProfile(uid) {
+    if (!requireLogin('프로필 보기')) return;
+    try {
+      const profile = await window.OceanCloud.getProfile(uid);
+      const own = uid === state.user.uid;
+      const dialog = openDialog(profile.nickname || profile.displayName || '바다 탐험가', 'OCEAN EXPLORER PROFILE', profileMarkup(profile, own));
+      if (own) {
+        $('.edit-my-profile', dialog.body).addEventListener('click', () => {
+          dialog.close();
+          openProfileEditor(profile);
+        });
+        $('.profile-logout', dialog.body).addEventListener('click', () => {
+          dialog.close();
+          window.OceanCloud.signOut();
+        });
+      }
+    } catch (error) {
+      toast(error.message || '프로필을 불러오지 못했어요.');
+    }
+  }
+
+  function startNotifications() {
+    if (!state.user || state.notificationUnsubscribe) return;
+    state.notificationUnsubscribe = window.OceanCloud.subscribeNotifications((notifications) => {
+      const previous = new Set(state.notifications.map((item) => item.id));
+      state.notifications = notifications;
+      const unread = notifications.filter((item) => !item.read);
+      $('#notificationBadge').textContent = unread.length > 99 ? '99+' : unread.length;
+      $('#notificationBadge').classList.toggle('hidden', !unread.length);
+      if (state.notificationsReady) {
+        const fresh = unread.find((item) => !previous.has(item.id));
+        if (fresh) toast(`🔔 ${fresh.actorName || '바다 탐험가'}님: ${fresh.text}`);
+      }
+      state.notificationsReady = true;
+    }, () => toast('알림을 불러오지 못했어요.'));
+  }
+
+  async function openNotifications() {
+    if (!requireLogin('알림')) return;
+    const items = state.notifications;
+    const body = items.length ? items.map((item) => `
+      <button class="notification-row ${item.read ? '' : 'unread'}" type="button" data-notification="${escapeHtml(item.id)}" data-notification-type="${escapeHtml(item.type || '')}">
+        <span>${escapeHtml(item.actorAvatar || '🌊')}</span>
+        <div><b>${escapeHtml(item.actorName || '바다 탐험가')}</b><p>${escapeHtml(item.text || '새 알림이 도착했어요.')}</p><small>${escapeHtml(item.timeLabel || '방금 전')}</small></div>
+      </button>`).join('') : '<div class="dialog-note">아직 도착한 알림이 없어요.</div>';
+    const dialog = openDialog('알림', `${items.filter((item) => !item.read).length}개의 읽지 않은 알림`, `<div class="notification-list">${body}</div>`);
+    $$('[data-notification]', dialog.body).forEach((button) => button.addEventListener('click', () => {
+      const type = button.dataset.notificationType;
+      dialog.close();
+      if (type === 'friend_request' || type === 'friend_accept') openFriends();
+      if (type === 'message') openChat();
+      if (type === 'comment') showTab('community');
+    }));
+    const unreadIds = items.filter((item) => !item.read).map((item) => item.id);
+    if (unreadIds.length) {
+      await window.OceanCloud.markNotificationsRead(unreadIds).catch(() => {});
+    }
+  }
+
   async function openFriends() {
     if (!requireLogin('친구 추가')) return;
     const dialog = openDialog('주변 바다 탐험가', 'FRIENDS NEAR BUSAN', '<div class="dialog-note">부산 바다를 함께 탐험할 실제 가입 사용자가 여기에 표시됩니다.</div><div class="profile-list" id="profileList"><p>친구 목록을 불러오는 중...</p></div>');
@@ -347,15 +471,31 @@
         return;
       }
       list.innerHTML = people.map((person) => {
-        const labels = { none: '친구 요청', sent: '요청 보냄', received: '요청 수락', friends: '친구 ✓' };
-        return `<article class="profile-row"><span>${escapeHtml(person.avatar || '🌊')}</span><div><b>${escapeHtml(person.displayName || '바다 탐험가')}</b><small>${escapeHtml(person.location || '부산')} · ${person.online ? '온라인' : '최근 활동'}</small></div><button type="button" data-person="${escapeHtml(person.uid)}" data-relation="${person.relation}" ${['sent','friends'].includes(person.relation) ? 'disabled' : ''}>${labels[person.relation] || labels.none}</button></article>`;
+        const labels = { none: '친구 요청', sent: '요청 보냄', received: '요청 수락', friends: '친구 삭제' };
+        return `<article class="profile-row">
+          <button class="profile-link" type="button" data-profile="${escapeHtml(person.uid)}"><span>${escapeHtml(person.avatar || '🌊')}</span><div><b>${escapeHtml(person.nickname || person.displayName || '바다 탐험가')}</b><small>${escapeHtml(person.residence || person.location || '부산')} · ${person.age ? `${Number(person.age)}세 · ` : ''}${person.online ? '온라인' : '최근 활동'}</small></div></button>
+          <button type="button" data-person="${escapeHtml(person.uid)}" data-relation="${person.relation}" ${person.relation === 'sent' ? 'disabled' : ''}>${labels[person.relation] || labels.none}</button>
+        </article>`;
       }).join('');
+      $$('[data-profile]', list).forEach((button) => button.addEventListener('click', () => showUserProfile(button.dataset.profile)));
       $$('[data-person]', list).forEach((button) => button.addEventListener('click', async () => {
         button.disabled = true;
         try {
-          if (button.dataset.relation === 'received') {
+          if (button.dataset.relation === 'friends') {
+            if (!window.confirm('이 사용자를 친구에서 삭제할까요?')) {
+              button.disabled = false;
+              return;
+            }
+            await window.OceanCloud.removeFriend(button.dataset.person);
+            button.dataset.relation = 'none';
+            button.textContent = '친구 요청';
+            button.disabled = false;
+            toast('친구 목록에서 삭제했어요.');
+          } else if (button.dataset.relation === 'received') {
             await window.OceanCloud.acceptFriend(button.dataset.person);
-            button.textContent = '친구 ✓';
+            button.dataset.relation = 'friends';
+            button.textContent = '친구 삭제';
+            button.disabled = false;
             toast('친구가 되었어요! 이제 채팅할 수 있어요.');
           } else {
             await window.OceanCloud.sendFriendRequest(button.dataset.person);
@@ -384,18 +524,24 @@
         </section>
       </div>`, 'chat-dialog');
     const friends = await window.OceanCloud.getFriends().catch(() => []);
+    dialog.addCleanup(() => {
+      if (state.chatUnsubscribe) {
+        state.chatUnsubscribe();
+        state.chatUnsubscribe = null;
+      }
+    });
     const people = $('#chatPeople', dialog.body);
     if (!friends.length) {
       people.innerHTML = '<button class="chat-person" type="button">친구 없음</button>';
       return;
     }
-    people.innerHTML = friends.map((friend) => `<button class="chat-person" type="button" data-chat-user="${escapeHtml(friend.uid)}">${escapeHtml(friend.displayName || '바다 친구')}</button>`).join('');
+    people.innerHTML = friends.map((friend) => `<button class="chat-person" type="button" data-chat-user="${escapeHtml(friend.uid)}">${escapeHtml(friend.nickname || friend.displayName || '바다 친구')}</button>`).join('');
     let activeFriend = null;
     $$('[data-chat-user]', people).forEach((button) => button.addEventListener('click', () => {
       $$('[data-chat-user]', people).forEach((item) => item.classList.remove('active'));
       button.classList.add('active');
       activeFriend = friends.find((item) => item.uid === button.dataset.chatUser);
-      $('#chatHeader', dialog.body).textContent = `${activeFriend.displayName || '바다 친구'}님과의 대화`;
+      $('#chatHeader', dialog.body).textContent = `${activeFriend.nickname || activeFriend.displayName || '바다 친구'}님과의 대화`;
       if (state.chatUnsubscribe) state.chatUnsubscribe();
       state.chatUnsubscribe = window.OceanCloud.subscribeMessages(activeFriend.uid, (messages) => {
         const container = $('#messages', dialog.body);
@@ -443,7 +589,68 @@
     });
   }
 
+  function openComments(post) {
+    if (!requireLogin('댓글')) return;
+    const dialog = openDialog(`댓글 · ${post.title}`, 'BUSAN OCEAN TALK', `
+      <div class="comment-list" id="commentList"><div class="dialog-note">댓글을 불러오는 중...</div></div>
+      <form class="comment-form" id="commentForm">
+        <input id="commentInput" maxlength="400" required autocomplete="off" placeholder="따뜻한 댓글을 남겨 주세요." aria-label="댓글">
+        <button type="submit">등록</button>
+      </form>`);
+    const commentsUnsubscribe = window.OceanCloud.subscribeComments(post.id, (comments) => {
+      const list = $('#commentList', dialog.body);
+      list.innerHTML = comments.length ? comments.map((comment) => {
+        const canDelete = comment.authorId === state.user.uid || post.authorId === state.user.uid;
+        return `<article class="comment-row">
+          <button class="comment-author profile-link" type="button" data-comment-profile="${escapeHtml(comment.authorId)}">
+            <span>${escapeHtml(comment.avatar || '🌊')}</span>
+            <div><b>${escapeHtml(comment.authorName || '바다 탐험가')}</b><small>${escapeHtml(comment.timeLabel || '방금 전')}</small></div>
+          </button>
+          <p>${escapeHtml(comment.text)}</p>
+          ${canDelete ? `<button class="comment-delete" type="button" data-comment-delete="${escapeHtml(comment.id)}">삭제</button>` : ''}
+        </article>`;
+      }).join('') : '<div class="dialog-note">첫 댓글을 남겨 대화를 시작해 보세요.</div>';
+      $$('[data-comment-profile]', list).forEach((button) => button.addEventListener('click', () => showUserProfile(button.dataset.commentProfile)));
+      $$('[data-comment-delete]', list).forEach((button) => button.addEventListener('click', async () => {
+        if (!window.confirm('이 댓글을 삭제할까요?')) return;
+        button.disabled = true;
+        try {
+          await window.OceanCloud.deleteComment(post.id, button.dataset.commentDelete);
+          toast('댓글을 삭제했어요.');
+        } catch (error) {
+          button.disabled = false;
+          toast(error.message || '댓글을 삭제하지 못했어요.');
+        }
+      }));
+    }, () => {
+      $('#commentList', dialog.body).innerHTML = '<div class="dialog-note">댓글을 불러오지 못했어요.</div>';
+    });
+    state.commentsUnsubscribe = commentsUnsubscribe;
+    dialog.addCleanup(() => {
+      commentsUnsubscribe();
+      if (state.commentsUnsubscribe === commentsUnsubscribe) state.commentsUnsubscribe = null;
+    });
+    $('#commentForm', dialog.body).addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const input = $('#commentInput', dialog.body);
+      const button = $('button', event.currentTarget);
+      const text = input.value.trim();
+      if (!text) return;
+      button.disabled = true;
+      input.value = '';
+      try {
+        await window.OceanCloud.addComment(post.id, text);
+      } catch (error) {
+        input.value = text;
+        toast(error.message || '댓글을 등록하지 못했어요.');
+      } finally {
+        button.disabled = false;
+      }
+    });
+  }
+
   function renderPosts(posts) {
+    state.posts = posts;
     const list = $('#postsList');
     if (!posts.length) {
       list.innerHTML = '<div class="auth-banner"><div><span>🌊</span><p><b>첫 번째 이야기를 기다려요</b><small>부산 바다에서의 모험을 공유해 보세요.</small></p></div></div>';
@@ -451,10 +658,30 @@
     }
     list.innerHTML = posts.map((post) => `
       <article class="post">
-        <div class="post-user"><span>${escapeHtml(post.avatar || '🌊')}</span><div><b>${escapeHtml(post.authorName || '바다 탐험가')}</b><small>${escapeHtml(post.location || '부산')} · ${escapeHtml(post.timeLabel || '최근')}</small></div></div>
+        <button class="post-user profile-link" type="button" data-post-profile="${escapeHtml(post.authorId)}"><span>${escapeHtml(post.avatar || '🌊')}</span><div><b>${escapeHtml(post.authorName || '바다 탐험가')}</b><small>${escapeHtml(post.location || '부산')} · ${escapeHtml(post.timeLabel || '최근')}</small></div></button>
         <h3>${escapeHtml(post.title)}</h3><p>${escapeHtml(post.body)}</p>
         <div class="post-meta"><span>📍 ${escapeHtml(post.location || '부산')}</span><b>부산 바다 피드</b></div>
+        <div class="post-tools">
+          <button type="button" data-post-comments="${escapeHtml(post.id)}">💬 댓글 보기·쓰기</button>
+          ${post.authorId === state.user?.uid ? `<button class="post-delete" type="button" data-post-delete="${escapeHtml(post.id)}">게시물 삭제</button>` : ''}
+        </div>
       </article>`).join('');
+    $$('[data-post-profile]', list).forEach((button) => button.addEventListener('click', () => showUserProfile(button.dataset.postProfile)));
+    $$('[data-post-comments]', list).forEach((button) => button.addEventListener('click', () => {
+      const post = state.posts.find((item) => item.id === button.dataset.postComments);
+      if (post) openComments(post);
+    }));
+    $$('[data-post-delete]', list).forEach((button) => button.addEventListener('click', async () => {
+      if (!window.confirm('이 게시물과 댓글을 삭제할까요? 삭제 후 되돌릴 수 없어요.')) return;
+      button.disabled = true;
+      try {
+        await window.OceanCloud.deletePost(button.dataset.postDelete);
+        toast('게시물을 삭제했어요.');
+      } catch (error) {
+        button.disabled = false;
+        toast(error.message || '게시물을 삭제하지 못했어요.');
+      }
+    }));
   }
 
   function loadCommunity() {
@@ -468,14 +695,22 @@
     const connected = Boolean(user);
     $('#cloudState').textContent = connected ? (user.displayName || '저장됨') : '체험 모드';
     $('#cloudState').classList.toggle('online', connected);
-    $('#authButton').textContent = connected ? (user.photoURL ? '✓' : '👤') : '👤';
-    $('#authButton').title = connected ? '로그아웃' : 'Google 로그인';
+    $('#authButton').textContent = '👤';
+    $('#authButton').title = connected ? '내 프로필' : 'Google 로그인';
     $('#authBanner').classList.toggle('connected', connected);
-    $('#communityLoginButton').textContent = connected ? `${user.displayName || '탐험가'} · 로그아웃` : 'Google 로그인';
+    $('#communityLoginButton').textContent = connected ? `${user.displayName || '탐험가'} · 로그인됨` : 'Google 로그인';
     if (!connected && state.postsUnsubscribe) {
       state.postsUnsubscribe();
       state.postsUnsubscribe = null;
     }
+    if (!connected && state.notificationUnsubscribe) {
+      state.notificationUnsubscribe();
+      state.notificationUnsubscribe = null;
+      state.notifications = [];
+      state.notificationsReady = false;
+      $('#notificationBadge').classList.add('hidden');
+    }
+    if (connected) startNotifications();
     if (connected && $('#community').classList.contains('active')) loadCommunity();
   }
 
@@ -484,13 +719,13 @@
     state.level = Math.max(1, Number(progress.level) || 1);
     state.xp = Math.max(0, Math.min(XP_GOAL - 1, Number(progress.xp) || 0));
     state.points = Math.max(0, Number(progress.points) || 0);
-    state.trash = Math.max(0, Math.min(3, Number(progress.trash) || 0));
+    state.trash = Math.max(0, Math.min(TRASH_GOAL, Number(progress.trash) || 0));
     state.collection.clear();
     (detail?.species || []).forEach((saved) => {
       const full = species.find((item) => item.id === saved.id) || saved;
       if (full?.id) state.collection.set(full.id, full);
     });
-    $('#missionCount').textContent = `${state.trash}/3`;
+    $('#missionCount').textContent = `${state.trash}/${TRASH_GOAL}`;
     renderProgress();
     renderCollection();
   }
@@ -618,12 +853,13 @@
     loadCommunity();
     toast('부산 바다 피드를 새로 불러왔어요.');
   });
-  $('#authButton').addEventListener('click', () => state.user ? window.OceanCloud?.signOut() : window.OceanCloud?.signIn());
-  $('#communityLoginButton').addEventListener('click', () => state.user ? window.OceanCloud?.signOut() : window.OceanCloud?.signIn());
+  $('#authButton').addEventListener('click', () => state.user ? showUserProfile(state.user.uid) : window.OceanCloud?.signIn());
+  $('#notificationButton').addEventListener('click', openNotifications);
+  $('#communityLoginButton').addEventListener('click', () => state.user ? showUserProfile(state.user.uid) : window.OceanCloud?.signIn());
 
   $('#trashFile').addEventListener('change', async (event) => {
     if (!event.target.files?.[0]) return;
-    if (state.trash >= 3) {
+    if (state.trash >= TRASH_GOAL) {
       toast('오늘의 쓰레기 줍기 미션을 이미 완료했어요!');
       event.target.value = '';
       return;
@@ -642,10 +878,10 @@
         toast(result.reason || '쓰레기로 확인되지 않아 수치가 올라가지 않았어요.');
         return;
       }
-      state.trash += 1;
-      $('#missionCount').textContent = `${state.trash}/3`;
-      gain(50, 35, `${result.item || '쓰레기'} 인증 완료! +50 씨앗 · +35 XP (${state.trash}/3)`);
-      if (state.trash === 3) setTimeout(() => gain(150, 100, '해변 정화 미션 완료! 보너스 +100 XP'), 500);
+      state.trash = Math.min(TRASH_GOAL, state.trash + 1);
+      $('#missionCount').textContent = `${state.trash}/${TRASH_GOAL}`;
+      gain(50, 35, `${result.item || '쓰레기'} 인증 완료! +50 씨앗 · +35 XP (${state.trash}/${TRASH_GOAL})`);
+      if (state.trash === TRASH_GOAL) setTimeout(() => gain(150, 100, '해변 정화 미션 완료! 보너스 +100 XP'), 500);
     } catch (error) {
       toast(error.message || 'AI 판독에 실패해 점수를 지급하지 않았어요.');
     } finally {
@@ -656,6 +892,7 @@
   });
 
   window.addEventListener('ocean-auth', (event) => updateAuthUI(event.detail?.user || null));
+  window.addEventListener('ocean-profile-required', (event) => openProfileEditor(event.detail?.profile || null, true));
   window.addEventListener('ocean-progress-loaded', (event) => applyCloudProgress(event.detail));
   window.addEventListener('ocean-cloud-error', (event) => toast(event.detail?.message || 'Firebase 연결을 확인해 주세요.'));
   window.addEventListener('resize', updateTargets);

@@ -26,6 +26,8 @@
   googleProvider.setCustomParameters({ prompt: 'select_account' });
   const serverTime = () => firebase.firestore.FieldValue.serverTimestamp();
   const currentUser = () => auth.currentUser;
+  let profileCache = null;
+
   const requireUser = () => {
     const user = currentUser();
     if (!user) throw new Error('로그인이 필요합니다.');
@@ -50,18 +52,36 @@
   }
 
   async function ensureProfile(user) {
-    const profile = {
-      uid: user.uid,
-      displayName: user.displayName || user.email?.split('@')[0] || '바다 탐험가',
+    const reference = db.collection('profiles').doc(user.uid);
+    const snapshot = await reference.get();
+    if (!snapshot.exists) {
+      profileCache = {
+        uid: user.uid,
+        displayName: user.displayName || user.email?.split('@')[0] || '바다 탐험가',
+        nickname: '',
+        email: user.email || '',
+        photoURL: user.photoURL || '',
+        avatar: '🌊',
+        residence: '',
+        location: '',
+        age: null,
+        bio: '',
+        profileComplete: false,
+        online: true,
+        createdAt: serverTime(),
+        lastSeen: serverTime()
+      };
+      await reference.set(profileCache);
+      return profileCache;
+    }
+    profileCache = { uid: user.uid, ...snapshot.data() };
+    await reference.set({
       email: user.email || '',
       photoURL: user.photoURL || '',
-      avatar: '🌊',
-      location: '부산',
       online: true,
       lastSeen: serverTime()
-    };
-    await db.collection('profiles').doc(user.uid).set(profile, { merge: true });
-    return profile;
+    }, { merge: true });
+    return profileCache;
   }
 
   async function loadProgress(user) {
@@ -94,6 +114,31 @@
     });
   }
 
+  async function actorProfile() {
+    if (profileCache?.profileComplete) return profileCache;
+    const user = requireUser();
+    const snapshot = await db.collection('profiles').doc(user.uid).get();
+    profileCache = snapshot.exists ? { uid: user.uid, ...snapshot.data() } : await ensureProfile(user);
+    return profileCache;
+  }
+
+  async function addNotification({ toUid, type, text, referenceId = '' }) {
+    const user = requireUser();
+    if (!toUid || toUid === user.uid) return;
+    const actor = await actorProfile();
+    await db.collection('notifications').add({
+      toUid,
+      fromUid: user.uid,
+      actorName: actor.nickname || actor.displayName || '바다 탐험가',
+      actorAvatar: actor.avatar || '🌊',
+      type,
+      text: String(text || '').slice(0, 160),
+      referenceId,
+      read: false,
+      createdAt: serverTime()
+    });
+  }
+
   const OceanCloud = {
     async signIn() {
       try {
@@ -115,7 +160,53 @@
       if (user) {
         await db.collection('profiles').doc(user.uid).set({ online: false, lastSeen: serverTime() }, { merge: true }).catch(() => {});
       }
+      profileCache = null;
       await auth.signOut();
+    },
+
+    async getMyProfile() {
+      const user = requireUser();
+      const snapshot = await db.collection('profiles').doc(user.uid).get();
+      profileCache = snapshot.exists ? { uid: user.uid, ...snapshot.data() } : await ensureProfile(user);
+      return profileCache;
+    },
+
+    async saveProfile(input) {
+      const user = requireUser();
+      const nickname = String(input.nickname || '').trim().slice(0, 24);
+      const residence = String(input.residence || '').trim().slice(0, 40);
+      const age = Math.round(Number(input.age));
+      const bio = String(input.bio || '').trim().slice(0, 300);
+      if (nickname.length < 2) throw new Error('닉네임은 두 글자 이상 입력해 주세요.');
+      if (!residence) throw new Error('거주지를 입력해 주세요.');
+      if (!Number.isFinite(age) || age < 1 || age > 120) throw new Error('나이는 1세부터 120세 사이로 입력해 주세요.');
+      const profile = {
+        uid: user.uid,
+        nickname,
+        displayName: nickname,
+        residence,
+        location: residence,
+        age,
+        bio,
+        avatar: input.avatar || profileCache?.avatar || '🌊',
+        email: user.email || '',
+        photoURL: user.photoURL || '',
+        profileComplete: true,
+        online: true,
+        updatedAt: serverTime(),
+        lastSeen: serverTime()
+      };
+      await db.collection('profiles').doc(user.uid).set(profile, { merge: true });
+      await user.updateProfile({ displayName: nickname }).catch(() => {});
+      profileCache = { ...(profileCache || {}), ...profile };
+      return profileCache;
+    },
+
+    async getProfile(uid) {
+      requireUser();
+      const snapshot = await db.collection('profiles').doc(uid).get();
+      if (!snapshot.exists) throw new Error('프로필을 찾을 수 없어요.');
+      return { uid: snapshot.id, ...snapshot.data() };
     },
 
     async saveProgress(progress) {
@@ -124,7 +215,7 @@
         level: Math.max(1, Number(progress.level) || 1),
         xp: Math.max(0, Number(progress.xp) || 0),
         points: Math.max(0, Number(progress.points) || 0),
-        trash: Math.max(0, Number(progress.trash) || 0),
+        trash: Math.max(0, Math.min(5, Number(progress.trash) || 0)),
         updatedAt: serverTime()
       }, { merge: true });
     },
@@ -145,13 +236,14 @@
 
     async createPost(post) {
       const user = requireUser();
+      const actor = await actorProfile();
       await db.collection('posts').add({
         authorId: user.uid,
-        authorName: user.displayName || user.email?.split('@')[0] || '바다 탐험가',
-        avatar: '🌊',
+        authorName: actor.nickname || actor.displayName || '바다 탐험가',
+        avatar: actor.avatar || '🌊',
         title: String(post.title || '').slice(0, 80),
         body: String(post.body || '').slice(0, 1000),
-        location: String(post.location || '부산').slice(0, 30),
+        location: String(post.location || actor.residence || '부산').slice(0, 30),
         createdAt: serverTime()
       });
     },
@@ -167,6 +259,65 @@
       }, onError);
     },
 
+    async deletePost(postId) {
+      const user = requireUser();
+      const postRef = db.collection('posts').doc(postId);
+      const post = await postRef.get();
+      if (!post.exists || post.data().authorId !== user.uid) throw new Error('본인이 작성한 게시물만 삭제할 수 있어요.');
+      const comments = await postRef.collection('comments').limit(200).get();
+      const batch = db.batch();
+      comments.docs.forEach((comment) => batch.delete(comment.ref));
+      batch.delete(postRef);
+      await batch.commit();
+    },
+
+    subscribeComments(postId, onComments, onError) {
+      requireUser();
+      return db.collection('posts').doc(postId).collection('comments')
+        .orderBy('createdAt', 'asc').limit(100)
+        .onSnapshot((snapshot) => onComments(snapshot.docs.map((document) => ({
+          id: document.id,
+          ...document.data(),
+          timeLabel: timeLabel(document.data().createdAt)
+        }))), onError);
+    },
+
+    async addComment(postId, text) {
+      const user = requireUser();
+      const actor = await actorProfile();
+      const postRef = db.collection('posts').doc(postId);
+      const post = await postRef.get();
+      if (!post.exists) throw new Error('게시물을 찾을 수 없어요.');
+      const body = String(text || '').trim().slice(0, 400);
+      if (!body) return;
+      await postRef.collection('comments').add({
+        authorId: user.uid,
+        authorName: actor.nickname || actor.displayName || '바다 탐험가',
+        avatar: actor.avatar || '🌊',
+        text: body,
+        createdAt: serverTime()
+      });
+      await addNotification({
+        toUid: post.data().authorId,
+        type: 'comment',
+        text: `회원님의 게시물에 댓글을 남겼어요: ${body}`,
+        referenceId: postId
+      });
+    },
+
+    async deleteComment(postId, commentId) {
+      const user = requireUser();
+      const postRef = db.collection('posts').doc(postId);
+      const [post, comment] = await Promise.all([
+        postRef.get(),
+        postRef.collection('comments').doc(commentId).get()
+      ]);
+      if (!comment.exists || (comment.data().authorId !== user.uid && post.data()?.authorId !== user.uid)) {
+        throw new Error('댓글을 삭제할 권한이 없어요.');
+      }
+      await comment.ref.delete();
+    },
+
     async getPeople() {
       const user = requireUser();
       const [profilesSnapshot, sentSnapshot, receivedSnapshot, friendsSnapshot] = await Promise.all([
@@ -175,12 +326,12 @@
         db.collection('friendRequests').where('toUid', '==', user.uid).get(),
         db.collection('friendships').where('members', 'array-contains', user.uid).get()
       ]);
-      const sent = new Map(sentSnapshot.docs.map((document) => [document.data().toUid, document.data().status]));
-      const received = new Map(receivedSnapshot.docs.map((document) => [document.data().fromUid, document.data().status]));
+      const sent = new Map(sentSnapshot.docs.filter((document) => document.data().status === 'pending').map((document) => [document.data().toUid, 'sent']));
+      const received = new Map(receivedSnapshot.docs.filter((document) => document.data().status === 'pending').map((document) => [document.data().fromUid, 'received']));
       const friends = new Set(friendsSnapshot.docs.flatMap((document) => document.data().members || []).filter((uid) => uid !== user.uid));
       return profilesSnapshot.docs
         .map((document) => ({ uid: document.id, ...document.data() }))
-        .filter((profile) => profile.uid !== user.uid)
+        .filter((profile) => profile.uid !== user.uid && profile.profileComplete)
         .map((profile) => ({
           ...profile,
           relation: friends.has(profile.uid) ? 'friends' : received.has(profile.uid) ? 'received' : sent.has(profile.uid) ? 'sent' : 'none'
@@ -198,6 +349,12 @@
         status: 'pending',
         createdAt: serverTime()
       });
+      await addNotification({
+        toUid,
+        type: 'friend_request',
+        text: '친구 요청을 보냈어요.',
+        referenceId: id
+      });
     },
 
     async acceptFriend(fromUid) {
@@ -207,9 +364,29 @@
       await db.runTransaction(async (transaction) => {
         const request = await transaction.get(requestRef);
         if (!request.exists || request.data().toUid !== user.uid) throw new Error('유효한 친구 요청이 없습니다.');
-        transaction.set(friendRef, { members: [fromUid, user.uid].sort(), createdAt: serverTime() });
+        transaction.set(friendRef, {
+          members: [fromUid, user.uid].sort(),
+          acceptedBy: user.uid,
+          requestId: `${fromUid}__${user.uid}`,
+          createdAt: serverTime()
+        });
         transaction.update(requestRef, { status: 'accepted', acceptedAt: serverTime() });
       });
+      await addNotification({
+        toUid: fromUid,
+        type: 'friend_accept',
+        text: '친구 요청을 수락했어요.',
+        referenceId: friendshipId(fromUid, user.uid)
+      });
+    },
+
+    async removeFriend(friendUid) {
+      const user = requireUser();
+      await db.collection('friendships').doc(friendshipId(user.uid, friendUid)).delete();
+      const batch = db.batch();
+      batch.delete(db.collection('friendRequests').doc(`${user.uid}__${friendUid}`));
+      batch.delete(db.collection('friendRequests').doc(`${friendUid}__${user.uid}`));
+      await batch.commit();
     },
 
     async getFriends() {
@@ -235,31 +412,67 @@
       const conversation = db.collection('conversations').doc(id);
       const friendship = await db.collection('friendships').doc(friendshipId(user.uid, friendUid)).get();
       if (!friendship.exists) throw new Error('친구에게만 메시지를 보낼 수 있습니다.');
+      const body = String(text).trim().slice(0, 500);
       await conversation.set({
         members: [user.uid, friendUid].sort(),
         updatedAt: serverTime(),
-        lastMessage: String(text).slice(0, 120)
+        lastMessage: body.slice(0, 120)
       }, { merge: true });
       await conversation.collection('messages').add({
         senderId: user.uid,
-        text: String(text).trim().slice(0, 500),
+        text: body,
         createdAt: serverTime()
       });
+      await addNotification({
+        toUid: friendUid,
+        type: 'message',
+        text: body,
+        referenceId: id
+      });
+    },
+
+    subscribeNotifications(onNotifications, onError) {
+      const user = requireUser();
+      return db.collection('notifications').where('toUid', '==', user.uid).limit(100)
+        .onSnapshot((snapshot) => {
+          const notifications = snapshot.docs.map((document) => ({
+            id: document.id,
+            ...document.data(),
+            timeLabel: timeLabel(document.data().createdAt)
+          })).sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+          onNotifications(notifications);
+        }, onError);
+    },
+
+    async markNotificationsRead(ids) {
+      const user = requireUser();
+      const batch = db.batch();
+      ids.slice(0, 100).forEach((id) => {
+        batch.update(db.collection('notifications').doc(id), { read: true, readAt: serverTime(), toUid: user.uid });
+      });
+      await batch.commit();
     }
   };
 
   window.OceanCloud = OceanCloud;
 
   auth.onAuthStateChanged(async (user) => {
-    dispatch('ocean-auth', { user: user ? {
-      uid: user.uid,
-      displayName: user.displayName || user.email?.split('@')[0] || '바다 탐험가',
-      email: user.email || '',
-      photoURL: user.photoURL || ''
-    } : null });
-    if (!user) return;
+    if (!user) {
+      dispatch('ocean-auth', { user: null });
+      return;
+    }
     try {
-      await ensureProfile(user);
+      const profile = await ensureProfile(user);
+      dispatch('ocean-auth', {
+        user: {
+          uid: user.uid,
+          displayName: profile.nickname || profile.displayName || user.email?.split('@')[0] || '바다 탐험가',
+          email: user.email || '',
+          photoURL: user.photoURL || '',
+          profile
+        }
+      });
+      if (!profile.profileComplete) dispatch('ocean-profile-required', { profile });
       await loadProgress(user);
     } catch (error) {
       cloudError('Firebase에서 탐험 기록을 불러오지 못했어요.', error);

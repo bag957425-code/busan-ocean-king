@@ -92,29 +92,29 @@
     if (photoPools.has(item.id)) return photoPools.get(item.id);
     const searchName = item.latin || item.name;
     const params = new URLSearchParams({
-      action: 'query',
-      format: 'json',
-      origin: '*',
-      generator: 'search',
-      gsrsearch: `${searchName} filetype:bitmap`,
-      gsrnamespace: '6',
-      gsrlimit: '20',
-      prop: 'imageinfo',
-      iiprop: 'url|extmetadata',
-      iiurlwidth: '720'
+      taxon_name: searchName,
+      photos: 'true',
+      quality_grade: 'research',
+      term_id: '17',
+      term_value_id: '18',
+      per_page: '30',
+      order: 'desc',
+      order_by: 'id'
     });
-    const response = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`);
+    const response = await fetch(`https://api.inaturalist.org/v1/observations?${params}`, {
+      headers: { Accept: 'application/json' }
+    });
+    if (!response.ok) throw new Error('살아있는 생물 관찰 사진을 불러오지 못했어요.');
     const data = await response.json();
-    const photos = Object.values(data.query?.pages || {}).map((page) => {
-      const info = page.imageinfo?.[0];
-      return {
-        url: info?.thumburl || info?.url,
-        source: info?.descriptionurl || `https://commons.wikimedia.org/wiki/${encodeURIComponent(page.title)}`,
-        title: page.title.replace(/^File:/, ''),
-        credit: info?.extmetadata?.Artist?.value?.replace(/<[^>]+>/g, '') || 'Wikimedia Commons'
-      };
-    }).filter((photo) => photo.url && /\.(jpe?g|png|webp)(\?|$)/i.test(photo.url));
-    if (!photos.length) throw new Error('실제 생물 사진을 찾지 못했어요.');
+    const photos = (data.results || []).flatMap((observation) =>
+      (observation.observation_photos || []).map(({ photo }) => ({
+        url: photo?.url?.replace('/square.', '/large.'),
+        source: `https://www.inaturalist.org/observations/${observation.id}`,
+        title: `${item.name} 살아있는 개체 관찰`,
+        credit: photo?.attribution || 'iNaturalist 관찰자'
+      }))
+    ).filter((photo) => photo.url);
+    if (!photos.length) throw new Error('살아있는 상태로 확인된 관찰 사진을 찾지 못했어요.');
     photos.sort(() => Math.random() - 0.5);
     photoPools.set(item.id, photos);
     return photos;

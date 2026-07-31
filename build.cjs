@@ -8,6 +8,7 @@ const assets = {
   '/style.css': { body: read('style.css'), type: 'text/css; charset=utf-8' },
   '/ai-photo.css': { body: read('ai-photo.css'), type: 'text/css; charset=utf-8' },
   '/ocean-ai.css': { body: read('ocean-ai.css'), type: 'text/css; charset=utf-8' },
+  '/social-features.css': { body: read('social-features.css'), type: 'text/css; charset=utf-8' },
   '/script.js': { body: read('script.js'), type: 'application/javascript; charset=utf-8' },
   '/ai-photo.js': { body: read('ai-photo.js'), type: 'application/javascript; charset=utf-8' },
   '/ocean-ai.js': { body: read('ocean-ai.js'), type: 'application/javascript; charset=utf-8' },

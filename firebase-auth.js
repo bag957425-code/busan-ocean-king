@@ -1,11 +1,11 @@
 (() => {
   const firebaseConfig = {
-    apiKey: 'AIzaSyDz94BMupj04QzZWIFC3v3wxnU14xAgdZc',
-    authDomain: 'blue-scout-ocean.firebaseapp.com',
-    projectId: 'blue-scout-ocean',
-    storageBucket: 'blue-scout-ocean.firebasestorage.app',
-    messagingSenderId: '3130799624',
-    appId: '1:3130799624:web:ec44c6d4f16dc011bc43bd'
+    apiKey: 'AIzaSyAJ-xGbpIFupFgHhrSt7v__ks9w9InZ4sY',
+    authDomain: 'busan-ocean-king-957425.firebaseapp.com',
+    projectId: 'busan-ocean-king-957425',
+    storageBucket: 'busan-ocean-king-957425.firebasestorage.app',
+    messagingSenderId: '617705306002',
+    appId: '1:617705306002:web:642432c7d7086ecf73b34b'
   };
 
   const dispatch = (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }));

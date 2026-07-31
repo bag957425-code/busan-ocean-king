@@ -111,7 +111,7 @@
 
   const wastes = [
     {
-      id: 'plastic-bottle', name: '페트병', icon: '🧴', kind: 'waste',
+      id: 'plastic-bottle', name: '페트병', icon: '🧴', kind: 'waste', searchTerm: 'plastic bottle marine litter beach',
       impacts: [
         '페트병은 가볍고 잘 떠서 강과 하천을 따라 바다까지 이동해요.',
         '파도와 햇빛에 잘게 부서지면 오랫동안 남는 미세플라스틱이 될 수 있어요.',
@@ -121,7 +121,7 @@
       ]
     },
     {
-      id: 'plastic-bag', name: '비닐봉지', icon: '🛍️', kind: 'waste',
+      id: 'plastic-bag', name: '비닐봉지', icon: '🛍️', kind: 'waste', searchTerm: 'plastic bag marine debris beach',
       impacts: [
         '비닐봉지는 물속에서 해파리처럼 보여 바다거북이 먹이로 착각할 수 있어요.',
         '삼킨 비닐은 소화기관을 막아 야생동물이 제대로 먹지 못하게 만들 수 있어요.',
@@ -131,7 +131,7 @@
       ]
     },
     {
-      id: 'foam-buoy', name: '스티로폼 부표', icon: '⬜', kind: 'waste',
+      id: 'foam-buoy', name: '스티로폼 부표', icon: '⬜', kind: 'waste', searchTerm: 'polystyrene foam buoy marine debris beach',
       impacts: [
         '스티로폼 부표는 파도와 충격에 쉽게 부서져 수많은 작은 알갱이가 돼요.',
         '작은 알갱이는 해변 모래와 섞여 한 번에 수거하기 매우 어려워요.',
@@ -141,7 +141,7 @@
       ]
     },
     {
-      id: 'ghost-net', name: '폐어망·낚싯줄', icon: '🕸️', kind: 'waste',
+      id: 'ghost-net', name: '폐어망·낚싯줄', icon: '🕸️', kind: 'waste', searchTerm: 'ghost fishing net marine debris',
       impacts: [
         '버려진 어망과 낚싯줄은 주인 없이도 계속 생물을 잡는 유령어업을 일으켜요.',
         '물고기·바다거북·새·해양포유류가 감기면 상처를 입거나 숨을 쉬지 못할 수 있어요.',
@@ -151,7 +151,7 @@
       ]
     },
     {
-      id: 'cigarette-butt', name: '담배꽁초', icon: '🚬', kind: 'waste',
+      id: 'cigarette-butt', name: '담배꽁초', icon: '🚬', kind: 'waste', searchTerm: 'cigarette butts beach litter',
       impacts: [
         '담배꽁초 필터는 종이가 아니라 미세한 플라스틱 섬유로 만들어져요.',
         '빗물받이에 버려진 꽁초는 하천을 거쳐 바다로 바로 이동할 수 있어요.',
@@ -161,7 +161,7 @@
       ]
     },
     {
-      id: 'aluminum-can', name: '알루미늄 캔', icon: '🥫', kind: 'waste',
+      id: 'aluminum-can', name: '알루미늄 캔', icon: '🥫', kind: 'waste', searchTerm: 'aluminium can beach litter',
       impacts: [
         '찌그러지거나 찢어진 캔의 날카로운 가장자리는 사람과 야생동물에 상처를 줄 수 있어요.',
         '캔 안에 작은 생물이 들어가 갇히거나 먹이를 찾지 못할 수 있어요.',
@@ -171,7 +171,7 @@
       ]
     },
     {
-      id: 'glass-bottle', name: '유리병', icon: '🍾', kind: 'waste',
+      id: 'glass-bottle', name: '유리병', icon: '🍾', kind: 'waste', searchTerm: 'glass bottle beach litter',
       impacts: [
         '유리병은 자연에서 쉽게 분해되지 않아 해변과 바닥에 오랫동안 남아요.',
         '깨진 유리 조각은 사람과 해양동물의 피부나 발을 깊게 베게 할 수 있어요.',

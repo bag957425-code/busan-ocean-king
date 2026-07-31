@@ -257,7 +257,15 @@
       element.classList.add('target');
       setTimeout(() => element.classList.remove('target'), 900);
       if (selected.kind === 'waste') {
-        $('#arenaStatus').textContent = `${selected.name}: 포획 원에 들어오면 잡아서 바다를 정화하세요!`;
+        $('#arenaStatus').textContent = `${selected.name} 실제 해양 쓰레기 사진을 찾는 중...`;
+        try {
+          const photo = await window.OceanAI.nextWastePhoto(selected);
+          $('i', element).innerHTML = `<img src="${escapeHtml(photo.url)}" alt="바다에서 발견된 ${escapeHtml(selected.name)} 실제 사진">`;
+          element.title = `${photo.credit || 'Wikimedia Commons'} · 실제 해양 쓰레기 현장 사진`;
+          $('#arenaStatus').textContent = `${selected.name}: 아이콘을 다시 누르면 다른 실제 현장 사진이 나와요.`;
+        } catch (_) {
+          $('#arenaStatus').textContent = `${selected.name}: 포획 원에 들어오면 잡아서 바다를 정화하세요!`;
+        }
         return;
       }
       if (selected.kind === 'bonus') {
@@ -461,13 +469,34 @@
     const lines = Array.isArray(item.impacts) ? item.impacts.slice(0, 7) : [];
     const dialog = openDialog(item.name, captured ? 'OCEAN CLEAN-UP SUCCESS' : 'MARINE LITTER GUIDE', `
       <div class="waste-detail">
-        <div class="waste-detail-icon">${escapeHtml(item.icon)}</div>
+        <button class="waste-photo photo-swap loading-photo" type="button" aria-label="${escapeHtml(item.name)} 실제 현장 사진 바꾸기">${escapeHtml(item.icon)}</button>
+        <a class="photo-credit hidden" target="_blank" rel="noopener noreferrer"></a>
         ${captured ? `<span class="reward">정화 보상 +30 씨앗 · +${earnedXp} XP</span>` : ''}
         <h3>해양 환경에 미치는 영향</h3>
         <ol>${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ol>
         <div class="species-facts"><b>안전한 수거</b><br>맨손으로 만지지 말고 집게와 장갑을 사용하세요. 날카롭거나 정체를 알 수 없는 물체는 보호자 또는 관리기관에 알려요.</div>
         <button class="dialog-primary waste-confirm" type="button">${captured ? '정화 완료' : '확인'}</button>
       </div>`);
+    const photoButton = $('.waste-photo', dialog.body);
+    const photoCredit = $('.photo-credit', dialog.body);
+    const swapPhoto = async () => {
+      photoButton.classList.add('loading-photo');
+      try {
+        const photo = await window.OceanAI.nextWastePhoto(item);
+        photoButton.innerHTML = `<img src="${escapeHtml(photo.url)}" alt="바다에서 발견된 ${escapeHtml(item.name)} 실제 사진">`;
+        photoButton.title = '누르면 다른 실제 현장 사진';
+        photoCredit.href = photo.source;
+        photoCredit.textContent = `사진: ${photo.credit || 'Wikimedia Commons'}${photo.license ? ` · ${photo.license}` : ''} · 원본 보기`;
+        photoCredit.classList.remove('hidden');
+      } catch (_) {
+        photoButton.textContent = item.icon;
+        photoButton.title = '사진을 불러오지 못했어요. 다시 눌러보세요.';
+      } finally {
+        photoButton.classList.remove('loading-photo');
+      }
+    };
+    photoButton.addEventListener('click', swapPhoto);
+    swapPhoto();
     $('.waste-confirm', dialog.body).addEventListener('click', dialog.close);
   }
 

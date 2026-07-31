@@ -2,6 +2,8 @@
   const API_URL = 'https://script.google.com/macros/s/AKfycbxvyo59LsqRySBpinKRk6lOKrzBlTT7FSu0-xAygrpsmy3s7eOutUlYY4_5dFhSvxGe/exec';
   const photoPools = new Map();
   const photoIndexes = new Map();
+  const wastePhotoPools = new Map();
+  const wastePhotoIndexes = new Map();
 
   function readAsDataUrl(file) {
     return new Promise((resolve, reject) => {
@@ -135,6 +137,54 @@
     return photos[index % photos.length];
   }
 
+  function plainText(value = '') {
+    const element = document.createElement('div');
+    element.innerHTML = value;
+    return element.textContent || element.innerText || '';
+  }
+
+  async function loadWastePhotoPool(item) {
+    if (wastePhotoPools.has(item.id)) return wastePhotoPools.get(item.id);
+    const params = new URLSearchParams({
+      action: 'query',
+      format: 'json',
+      origin: '*',
+      generator: 'search',
+      gsrsearch: `${item.searchTerm || `${item.name} marine litter beach`} filetype:bitmap`,
+      gsrnamespace: '6',
+      gsrlimit: '24',
+      prop: 'imageinfo',
+      iiprop: 'url|mime|extmetadata',
+      iiurlwidth: '720',
+      iiextmetadatafilter: 'Artist|Credit|LicenseShortName'
+    });
+    const response = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`);
+    if (!response.ok) throw new Error('실제 해양 쓰레기 사진을 불러오지 못했어요.');
+    const data = await response.json();
+    const photos = Object.values(data.query?.pages || {}).map((page) => {
+      const info = page.imageinfo?.[0];
+      const metadata = info?.extmetadata || {};
+      return {
+        url: info?.thumburl || info?.url,
+        source: info?.descriptionurl || `https://commons.wikimedia.org/wiki/${encodeURIComponent(page.title)}`,
+        title: page.title.replace(/^File:/, ''),
+        credit: plainText(metadata.Artist?.value || metadata.Credit?.value || 'Wikimedia Commons'),
+        license: plainText(metadata.LicenseShortName?.value || '')
+      };
+    }).filter((photo) => photo.url && /\.(jpe?g|png|webp)(\?|$)/i.test(photo.url));
+    if (!photos.length) throw new Error('해당 쓰레기의 실제 현장 사진을 찾지 못했어요.');
+    photos.sort(() => Math.random() - 0.5);
+    wastePhotoPools.set(item.id, photos);
+    return photos;
+  }
+
+  async function nextWastePhoto(item) {
+    const photos = await loadWastePhotoPool(item);
+    const index = wastePhotoIndexes.get(item.id) || 0;
+    wastePhotoIndexes.set(item.id, index + 1);
+    return photos[index % photos.length];
+  }
+
   function getPosition() {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) return reject(new Error('이 기기에서는 위치 기능을 사용할 수 없어요.'));
@@ -176,6 +226,7 @@
     request,
     prepareImage,
     nextSpeciesPhoto,
+    nextWastePhoto,
     getPosition,
     getWeather
   };

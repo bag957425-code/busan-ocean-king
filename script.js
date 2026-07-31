@@ -573,18 +573,25 @@
       correctIndex: 2,
       explanation: '플라스틱은 잘 사라지지 않고 더 작은 미세플라스틱으로 남을 수 있어요.'
     };
+    const fallbacks = [
+      fallback,
+      { question: '바다거북이 비닐을 먹이로 착각하는 가장 큰 이유는?', choices: ['해파리와 모양이 비슷해서', '소리가 나서', '빛이 나서'], correctIndex: 0, explanation: '물속에서 떠다니는 비닐은 해파리처럼 보여 바다거북에게 위험해요.' },
+      { question: '조간대 생물을 관찰한 뒤 가장 올바른 행동은?', choices: ['집으로 가져간다', '원래 있던 자리에 둔다', '먹이를 준다'], correctIndex: 1, explanation: '생물이 살던 돌과 물의 위치를 그대로 지켜주는 것이 가장 좋아요.' }
+    ];
     try {
       const quiz = await window.OceanAI.request('quiz', {
         nonce: `${Date.now()}-${Math.random()}`,
         location: state.location || { name: '부산' }
       });
+      const content = `${quiz?.question || ''} ${(quiz?.choices || []).join(' ')}`;
+      if (!Array.isArray(quiz?.choices) || quiz.choices.length < 3 ||
+          !Number.isInteger(quiz.correctIndex) || quiz.correctIndex < 0 ||
+          quiz.correctIndex >= quiz.choices.length ||
+          /불꽃축제|지역 축제|세계 최초|정확한 개최/.test(content)) {
+        throw new Error('교육 검증 기준을 통과하지 못한 문제');
+      }
       bindQuiz(quiz);
     } catch (_) {
-      const fallbacks = [
-        fallback,
-        { question: '바다거북이 비닐을 먹이로 착각하는 가장 큰 이유는?', choices: ['해파리와 모양이 비슷해서', '소리가 나서', '빛이 나서'], correctIndex: 0, explanation: '물속에서 떠다니는 비닐은 해파리처럼 보여 바다거북에게 위험해요.' },
-        { question: '조간대 생물을 관찰한 뒤 가장 올바른 행동은?', choices: ['집으로 가져간다', '원래 있던 자리에 둔다', '먹이를 준다'], correctIndex: 1, explanation: '생물이 살던 돌과 물의 위치를 그대로 지켜주는 것이 가장 좋아요.' }
-      ];
       bindQuiz(fallbacks[Math.floor(Math.random() * fallbacks.length)]);
     }
   }

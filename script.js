@@ -42,7 +42,8 @@
     trash: 0,
     collection: new Map(),
     creatures: new Map(),
-    movementTimer: null,
+    captureReadyAt: 0,
+    captureCooldownTimer: null,
     difficulty: 'beginner',
     xpBuffs: [],
     user: null,
@@ -138,7 +139,7 @@
     $('#difficultySummary').textContent = `${settings.name} · 포획 원 ${settings.zone}px · 동시 쓰레기 목표 ${settings.trashTarget}개`;
     [...state.creatures.keys()].slice(settings.maxEntities).forEach((id) => removeCreature(id));
     updateTargets();
-    restartMovementScheduler();
+    state.creatures.forEach((entry) => restartCreatureMovement(entry));
     if (persist) saveProgress();
   }
 
@@ -222,15 +223,12 @@
     });
   }
 
-  function restartMovementScheduler() {
-    clearTimeout(state.movementTimer);
+  function restartCreatureMovement(entry) {
+    clearTimeout(entry.moveTimer);
     const schedule = () => {
       const settings = difficultySettings();
-      state.movementTimer = setTimeout(() => {
-        const entries = [...state.creatures.values()].filter((entry) => entry.element.isConnected);
-        if (!$('#playScreen').classList.contains('hidden') && entries.length) {
-          moveCreature(entries[Math.floor(Math.random() * entries.length)]);
-        }
+      entry.moveTimer = setTimeout(() => {
+        if (entry.element.isConnected && !$('#playScreen').classList.contains('hidden')) moveCreature(entry);
         schedule();
       }, settings.moveMin + Math.random() * settings.moveRange);
     };
@@ -240,6 +238,7 @@
   function removeCreature(id, caught = false) {
     const entry = state.creatures.get(id);
     if (!entry) return;
+    clearTimeout(entry.moveTimer);
     clearTimeout(entry.lifeTimer);
     entry.element.classList.add('vanish');
     setTimeout(() => entry.element.remove(), 420);
@@ -276,6 +275,7 @@
     const entry = { id, species: selected, element, x: 0, y: 0 };
     state.creatures.set(id, entry);
     placeCreature(entry);
+    restartCreatureMovement(entry);
     entry.lifeTimer = setTimeout(() => removeCreature(id), 10000 + Math.random() * 6000);
     element.addEventListener('click', async () => {
       element.classList.add('target');
@@ -328,7 +328,34 @@
     if (inside.size) $('#arenaStatus').textContent = '지금이에요! 포획 버튼을 눌러보세요.';
   }
 
+  function beginCaptureCooldown() {
+    const button = $('#captureButton');
+    state.captureReadyAt = Date.now() + 1000;
+    button.disabled = true;
+    button.classList.add('cooling');
+    button.setAttribute('aria-label', '포획 버튼 재충전 중');
+    const render = () => {
+      const remaining = Math.max(0, state.captureReadyAt - Date.now());
+      button.style.setProperty('--cooldown-progress', `${Math.min(360, (1 - remaining / 1000) * 360)}deg`);
+      const label = $('b', button);
+      if (remaining > 0) {
+        label.textContent = `${(remaining / 1000).toFixed(1)}초`;
+        state.captureCooldownTimer = setTimeout(render, 50);
+      } else {
+        clearTimeout(state.captureCooldownTimer);
+        button.disabled = false;
+        button.classList.remove('cooling');
+        button.style.removeProperty('--cooldown-progress');
+        button.setAttribute('aria-label', '포획');
+        label.textContent = '포획';
+      }
+    };
+    render();
+  }
+
   async function captureCreature() {
+    if (Date.now() < state.captureReadyAt) return;
+    beginCaptureCooldown();
     const target = creaturesInsideZone()[0];
     const arena = $('#captureArena');
     arena.classList.add('capture-flash');

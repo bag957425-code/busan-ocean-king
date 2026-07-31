@@ -137,24 +137,27 @@
       userRef.collection('species').get()
     ]);
     const progress = progressSnapshot.exists ? progressSnapshot.data() : {
-      level: 1, xp: 0, points: 0, trash: 0, difficulty: 'beginner'
+      level: 0, xp: 0, trash: 0, difficulty: 'beginner'
     };
     if (!progressSnapshot.exists) {
       await userRef.set({
-        level: 1,
+        level: 0,
         xp: 0,
-        points: 0,
         trash: 0,
         difficulty: 'beginner',
         createdAt: serverTime(),
         updatedAt: serverTime()
       });
+    } else if (Object.prototype.hasOwnProperty.call(progress, 'points')) {
+      await userRef.update({
+        points: firebase.firestore.FieldValue.delete(),
+        updatedAt: serverTime()
+      }).catch(() => {});
     }
     dispatch('ocean-progress-loaded', {
       progress: {
-        level: Math.max(1, Number(progress.level) || 1),
+        level: Math.max(0, Math.min(999, Math.floor(Number(progress.level) || 0))),
         xp: Math.max(0, Number(progress.xp) || 0),
-        points: Math.max(0, Number(progress.points) || 0),
         trash: Math.max(0, Number(progress.trash) || 0),
         difficulty: ['beginner', 'intermediate', 'advanced', 'master'].includes(progress.difficulty) ? progress.difficulty : 'beginner'
       },
@@ -267,9 +270,9 @@
     async saveProgress(progress) {
       const user = requireUser();
       await db.collection('users').doc(user.uid).set({
-        level: Math.max(1, Number(progress.level) || 1),
+        level: Math.max(0, Math.min(999, Math.floor(Number(progress.level) || 0))),
         xp: Math.max(0, Number(progress.xp) || 0),
-        points: Math.max(0, Number(progress.points) || 0),
+        points: firebase.firestore.FieldValue.delete(),
         trash: Math.max(0, Math.min(5, Number(progress.trash) || 0)),
         difficulty: ['beginner', 'intermediate', 'advanced', 'master'].includes(progress.difficulty) ? progress.difficulty : 'beginner',
         updatedAt: serverTime()

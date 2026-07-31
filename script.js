@@ -1,7 +1,9 @@
 (() => {
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-  const XP_GOAL = 300;
+  const BASE_XP_GOAL = 100;
+  const XP_GROWTH_RATE = 1.15;
+  const MAX_LEVEL = 999;
   const TRASH_GOAL = 5;
 
   const legacySpecies = [
@@ -36,9 +38,8 @@
   };
 
   const state = {
-    points: 0,
     xp: 0,
-    level: 1,
+    level: 0,
     trash: 0,
     collection: new Map(),
     creatures: new Map(),
@@ -129,13 +130,34 @@
   }
 
   function renderProgress() {
+    const atMaxLevel = state.level >= MAX_LEVEL;
+    const xpGoal = xpGoalForLevel(state.level);
     $('#levelNumber').textContent = state.level;
-    $('#xpNow').textContent = state.xp;
-    $('#xpGoal').textContent = XP_GOAL;
-    $('#xpLeft').textContent = `다음 레벨까지 ${XP_GOAL - state.xp} XP`;
-    $('#xpBar').style.width = `${Math.min(100, state.xp / XP_GOAL * 100)}%`;
-    $('#pointTotal').textContent = state.points.toLocaleString();
+    $('#xpNow').textContent = atMaxLevel ? 'MAX' : state.xp.toLocaleString();
+    $('#xpGoal').textContent = atMaxLevel ? 'MAX' : xpGoal.toLocaleString();
+    $('#xpLeft').textContent = atMaxLevel
+      ? '최대 레벨 999 달성'
+      : `다음 레벨까지 ${(xpGoal - state.xp).toLocaleString()} XP`;
+    $('#xpBar').style.width = atMaxLevel ? '100%' : `${Math.min(100, state.xp / xpGoal * 100)}%`;
     renderBuffState();
+  }
+
+  function xpGoalForLevel(level) {
+    const safeLevel = Math.max(0, Math.min(MAX_LEVEL - 1, Math.floor(Number(level) || 0)));
+    return Math.ceil(BASE_XP_GOAL * (XP_GROWTH_RATE ** safeLevel));
+  }
+
+  function normalizeLevelProgress(level, xp) {
+    let safeLevel = Math.max(0, Math.min(MAX_LEVEL, Math.floor(Number(level) || 0)));
+    let safeXp = Math.max(0, Math.floor(Number(xp) || 0));
+    while (safeLevel < MAX_LEVEL) {
+      const goal = xpGoalForLevel(safeLevel);
+      if (safeXp < goal) break;
+      safeXp -= goal;
+      safeLevel += 1;
+    }
+    if (safeLevel >= MAX_LEVEL) safeXp = 0;
+    return { level: safeLevel, xp: safeXp };
   }
 
   function activeXpMultiplier() {
@@ -196,7 +218,6 @@
       await window.OceanCloud.saveProgress({
         level: state.level,
         xp: state.xp,
-        points: state.points,
         trash: state.trash,
         difficulty: state.difficulty
       });
@@ -206,17 +227,17 @@
     }
   }
 
-  function gain(points, xp, message) {
+  function gain(xp, message) {
     const multiplier = activeXpMultiplier();
-    const earnedXp = Math.round(xp * multiplier);
-    state.points += points;
+    const earnedXp = state.level >= MAX_LEVEL ? 0 : Math.round(xp * multiplier);
     state.xp += earnedXp;
     let leveledUp = false;
-    while (state.xp >= XP_GOAL) {
-      state.xp -= XP_GOAL;
+    while (state.level < MAX_LEVEL && state.xp >= xpGoalForLevel(state.level)) {
+      state.xp -= xpGoalForLevel(state.level);
       state.level += 1;
       leveledUp = true;
     }
+    if (state.level >= MAX_LEVEL) state.xp = 0;
     renderProgress();
     saveProgress();
     if (leveledUp) toast(`🎉 레벨 업! 레벨 ${state.level} 탐험가가 되었어요.`);
@@ -451,7 +472,7 @@
       return;
     }
     if (found.kind === 'waste') {
-      const earnedXp = gain(30, 25, `${found.name} 정화 성공! +30 씨앗`);
+      const earnedXp = gain(25, `${found.name} 정화 성공! +25 XP`);
       openWasteDetail(found, true, earnedXp);
       return;
     }
@@ -461,7 +482,7 @@
     if (window.OceanCloud && state.user) {
       try { await window.OceanCloud.addSpecies(found); } catch (_) { toast('도감 저장이 잠시 지연되고 있어요.'); }
     }
-    const earnedXp = gain(isNew ? 60 : 20, isNew ? 80 : 25);
+    const earnedXp = gain(isNew ? 80 : 25);
     const dialog = openDialog(isNew ? '새로운 생물 발견!' : '다시 만난 바다 친구!', 'CAPTURE SUCCESS', `
       <div class="caught-card">
         <button class="caught-icon photo-swap" type="button" aria-label="${escapeHtml(found.name)} 실제 사진 바꾸기">${found.icon}</button>
@@ -588,7 +609,7 @@
       <div class="waste-detail">
         <button class="waste-photo photo-swap loading-photo" type="button" aria-label="${escapeHtml(item.name)} 실제 현장 사진 바꾸기">${escapeHtml(item.icon)}</button>
         <a class="photo-credit hidden" target="_blank" rel="noopener noreferrer"></a>
-        ${captured ? `<span class="reward">정화 보상 +30 씨앗 · +${earnedXp} XP</span>` : ''}
+        ${captured ? `<span class="reward">정화 보상 +${earnedXp} XP</span>` : ''}
         <h3>해양 환경에 미치는 영향</h3>
         <ol>${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ol>
         <div class="species-facts"><b>안전한 수거</b><br>맨손으로 만지지 말고 집게와 장갑을 사용하세요. 날카롭거나 정체를 알 수 없는 물체는 보호자 또는 관리기관에 알려요.</div>
@@ -640,7 +661,7 @@
         <div><b>${escapeHtml(item.name)}</b><small>현실의 해안에서 자주 발견되는 해양 쓰레기 · 영향 설명 ${item.impacts.length}줄</small></div>
         <button type="button" data-waste-detail="${escapeHtml(item.id)}">영향 보기</button>
       </article>`).join('');
-    const dialog = openDialog('해양 쓰레기 7종', 'MARINE LITTER ENCYCLOPEDIA', `<div class="dialog-note">탐험 화면에서 쓰레기를 포획하면 정화 XP와 씨앗을 받을 수 있어요.</div><div class="profile-list catalog-list">${cards}</div>`);
+    const dialog = openDialog('해양 쓰레기 7종', 'MARINE LITTER ENCYCLOPEDIA', `<div class="dialog-note">탐험 화면에서 쓰레기를 포획하면 정화 XP를 받을 수 있어요.</div><div class="profile-list catalog-list">${cards}</div>`);
     $$('[data-waste-detail]', dialog.body).forEach((button) => button.addEventListener('click', () => {
       const item = marineWastes.find((candidate) => candidate.id === button.dataset.wasteDetail);
       if (item) openWasteDetail(item);
@@ -1072,9 +1093,9 @@
 
   function applyCloudProgress(detail) {
     const progress = detail?.progress || {};
-    state.level = Math.max(1, Number(progress.level) || 1);
-    state.xp = Math.max(0, Math.min(XP_GOAL - 1, Number(progress.xp) || 0));
-    state.points = Math.max(0, Number(progress.points) || 0);
+    const normalized = normalizeLevelProgress(progress.level, progress.xp);
+    state.level = normalized.level;
+    state.xp = normalized.xp;
     state.trash = Math.max(0, Math.min(TRASH_GOAL, Number(progress.trash) || 0));
     applyDifficulty(progress.difficulty || 'beginner', false);
     state.collection.clear();
@@ -1149,7 +1170,7 @@
       if (button.hasAttribute('data-correct')) {
         button.classList.add('correct');
         $('#quizFeedback').textContent = quiz?.explanation || '정답이에요! 작은 실천이 바다 생태계를 지켜요.';
-        gain(30, 30, '정답이에요! +30 XP');
+        gain(30, '정답이에요! +30 XP');
       } else {
         button.classList.add('wrong');
         const answer = choices[correctIndex] || '정답 보기';
@@ -1244,8 +1265,8 @@
       }
       state.trash = Math.min(TRASH_GOAL, state.trash + 1);
       $('#missionCount').textContent = `${state.trash}/${TRASH_GOAL}`;
-      gain(50, 35, `${result.item || '쓰레기'} 인증 완료! +50 씨앗 · +35 XP (${state.trash}/${TRASH_GOAL})`);
-      if (state.trash === TRASH_GOAL) setTimeout(() => gain(150, 100, '해변 정화 미션 완료! 보너스 +100 XP'), 500);
+      gain(35, `${result.item || '쓰레기'} 인증 완료! +35 XP (${state.trash}/${TRASH_GOAL})`);
+      if (state.trash === TRASH_GOAL) setTimeout(() => gain(100, '해변 정화 미션 완료! 보너스 +100 XP'), 500);
     } catch (error) {
       toast(error.message || 'AI 판독에 실패해 점수를 지급하지 않았어요.');
     } finally {

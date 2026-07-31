@@ -4,18 +4,18 @@
   const XP_GOAL = 300;
 
   const species = [
-    { id: 'mackerel', name: '고등어', icon: '🐟', rarity: '흔함', habitat: '부산 연안과 외해', facts: '고등어는 부산을 대표하는 회유성 어류예요. 빠르게 헤엄치며 플랑크톤과 작은 물고기를 먹고 무리를 지어 이동해요.', guide: '아가미가 아니라 물속의 산소를 이용하며, 부산공동어시장은 전국 고등어 유통의 중심지로 알려져 있어요.' },
-    { id: 'rock-bream', name: '돌돔', icon: '🐠', rarity: '보통', habitat: '태종대·오륙도 암초', facts: '돌돔은 단단한 이빨로 성게와 조개껍데기를 깨 먹어요. 어린 개체는 검은 줄무늬가 선명해요.', guide: '암초 생태계의 먹이 관계를 보여주는 중요한 물고기예요.' },
-    { id: 'seahorse', name: '해마', icon: '🦄', rarity: '희귀', habitat: '해조류 숲', facts: '해마는 꼬리로 해조류를 붙잡고 생활하며 수컷이 알을 품는 특별한 물고기예요.', guide: '해조류 숲이 사라지면 살 곳도 함께 줄어들기 때문에 서식지 보호가 중요해요.' },
-    { id: 'octopus', name: '참문어', icon: '🐙', rarity: '보통', habitat: '기장·영도 바위틈', facts: '참문어는 주변 환경에 맞춰 몸의 색과 무늬를 바꿀 수 있고, 빨판으로 먹이를 감지해요.', guide: '지능이 높은 무척추동물로 도구를 사용하거나 미로를 학습하기도 해요.' },
-    { id: 'starfish', name: '별불가사리', icon: '⭐', rarity: '흔함', habitat: '다대포 조간대', facts: '불가사리는 극피동물이며 관족이라는 작은 발로 천천히 움직여요.', guide: '관찰 후에는 원래 있던 자리에 두고, 햇빛 아래 오래 꺼내놓지 마세요.' },
-    { id: 'sea-turtle', name: '푸른바다거북', icon: '🐢', rarity: '전설', habitat: '부산 외해', facts: '푸른바다거북은 먼 바다를 이동하는 보호종이에요. 비닐을 해파리로 착각할 수 있어요.', guide: '발견하면 거리를 두고 관찰하고 해양쓰레기를 줄여 서식 환경을 지켜주세요.' },
-    { id: 'moon-jelly', name: '보름달물해파리', icon: '🪼', rarity: '보통', habitat: '수영만·연안', facts: '몸속에 보이는 네 개의 고리 모양 생식샘 때문에 보름달물해파리라는 이름이 붙었어요.', guide: '약한 독성이지만 피부에 닿지 않도록 안전거리를 유지해요.' },
-    { id: 'squid', name: '살오징어', icon: '🦑', rarity: '보통', habitat: '기장 앞바다', facts: '살오징어는 몸속 색소포를 조절해 빠르게 색을 바꾸고 제트 추진으로 이동해요.', guide: '밤에는 빛에 모이는 습성이 있어 집어등 어업에 이용돼요.' },
-    { id: 'dolphin', name: '상괭이', icon: '🐬', rarity: '희귀', habitat: '남해와 부산 외해', facts: '상괭이는 등지느러미가 없는 작은 돌고래예요. 숨을 쉬기 위해 정기적으로 수면 위로 올라와요.', guide: '멸종위기 해양보호생물로 배에서 발견해도 쫓아가거나 먹이를 주면 안 돼요.' },
-    { id: 'crab', name: '꽃게', icon: '🦀', rarity: '보통', habitat: '낙동강 하구 모래바닥', facts: '꽃게의 마지막 다리는 노처럼 납작해 헤엄치기에 알맞아요.', guide: '어린 꽃게가 자랄 수 있도록 금어기와 포획 금지 크기를 지키는 것이 중요해요.' },
-    { id: 'anchovy', name: '멸치', icon: '🐟', rarity: '흔함', habitat: '기장 연안', facts: '멸치는 작은 몸으로 큰 무리를 이루며 많은 바닷새와 대형 물고기의 먹이가 돼요.', guide: '부산 기장에서는 봄철 멸치 어업과 멸치 축제로 지역 바다 문화를 만날 수 있어요.' },
-    { id: 'sea-hare', name: '군소', icon: '🐌', rarity: '희귀', habitat: '송정 얕은 암반', facts: '군소는 해조류를 먹는 바다 달팽이예요. 위협을 받으면 보라색 액체를 내보내기도 해요.', guide: '독성이 있을 수 있으므로 손으로 만지거나 먹지 말고 눈으로만 관찰해요.' }
+    { id: 'mackerel', name: '고등어', latin: 'Scomber japonicus', icon: '🐟', rarity: '흔함', habitat: '부산 연안과 외해', facts: '고등어는 부산을 대표하는 회유성 어류예요. 빠르게 헤엄치며 플랑크톤과 작은 물고기를 먹고 무리를 지어 이동해요.', guide: '부산공동어시장은 전국 고등어 유통의 중심지로 알려져 있어요.' },
+    { id: 'rock-bream', name: '돌돔', latin: 'Oplegnathus fasciatus', icon: '🐠', rarity: '보통', habitat: '태종대·오륙도 암초', facts: '돌돔은 단단한 이빨로 성게와 조개껍데기를 깨 먹어요. 어린 개체는 검은 줄무늬가 선명해요.', guide: '암초 생태계의 먹이 관계를 보여주는 중요한 물고기예요.' },
+    { id: 'seahorse', name: '가시해마', latin: 'Hippocampus histrix', icon: '🦄', rarity: '희귀', habitat: '부산 연안 해조류 숲', facts: '해마는 꼬리로 해조류를 붙잡고 생활하며 수컷이 알을 품는 특별한 물고기예요.', guide: '해조류 숲이 사라지면 살 곳도 함께 줄어들기 때문에 서식지 보호가 중요해요.' },
+    { id: 'octopus', name: '참문어', latin: 'Octopus vulgaris', icon: '🐙', rarity: '보통', habitat: '기장·영도 바위틈', facts: '참문어는 주변 환경에 맞춰 몸의 색과 무늬를 바꿀 수 있고, 빨판으로 먹이를 감지해요.', guide: '지능이 높은 무척추동물로 도구를 사용하거나 미로를 학습하기도 해요.' },
+    { id: 'starfish', name: '별불가사리', latin: 'Asterina pectinifera', icon: '⭐', rarity: '흔함', habitat: '다대포 조간대', facts: '불가사리는 극피동물이며 관족이라는 작은 발로 천천히 움직여요.', guide: '관찰 후에는 원래 있던 자리에 두고, 햇빛 아래 오래 꺼내놓지 마세요.' },
+    { id: 'sea-turtle', name: '푸른바다거북', latin: 'Chelonia mydas', icon: '🐢', rarity: '전설', habitat: '부산 외해', facts: '푸른바다거북은 먼 바다를 이동하는 보호종이에요. 비닐을 해파리로 착각할 수 있어요.', guide: '발견하면 거리를 두고 관찰하고 해양쓰레기를 줄여 서식 환경을 지켜주세요.' },
+    { id: 'moon-jelly', name: '보름달물해파리', latin: 'Aurelia coerulea', icon: '🪼', rarity: '보통', habitat: '수영만·연안', facts: '몸속에 보이는 네 개의 고리 모양 생식샘 때문에 보름달물해파리라는 이름이 붙었어요.', guide: '약한 독성이지만 피부에 닿지 않도록 안전거리를 유지해요.' },
+    { id: 'squid', name: '살오징어', latin: 'Todarodes pacificus', icon: '🦑', rarity: '보통', habitat: '기장 앞바다', facts: '살오징어는 몸속 색소포를 조절해 빠르게 색을 바꾸고 제트 추진으로 이동해요.', guide: '밤에는 빛에 모이는 습성이 있어 집어등 어업에 이용돼요.' },
+    { id: 'dolphin', name: '상괭이', latin: 'Neophocaena asiaeorientalis', icon: '🐬', rarity: '희귀', habitat: '남해와 부산 외해', facts: '상괭이는 등지느러미가 없는 작은 돌고래예요. 숨을 쉬기 위해 정기적으로 수면 위로 올라와요.', guide: '멸종위기 해양보호생물로 배에서 발견해도 쫓아가거나 먹이를 주면 안 돼요.' },
+    { id: 'crab', name: '꽃게', latin: 'Portunus trituberculatus', icon: '🦀', rarity: '보통', habitat: '낙동강 하구 모래바닥', facts: '꽃게의 마지막 다리는 노처럼 납작해 헤엄치기에 알맞아요.', guide: '어린 꽃게가 자랄 수 있도록 금어기와 포획 금지 크기를 지키는 것이 중요해요.' },
+    { id: 'anchovy', name: '멸치', latin: 'Engraulis japonicus', icon: '🐟', rarity: '흔함', habitat: '기장 연안', facts: '멸치는 작은 몸으로 큰 무리를 이루며 많은 바닷새와 대형 물고기의 먹이가 돼요.', guide: '부산 기장에서는 봄철 멸치 어업과 멸치 축제로 지역 바다 문화를 만날 수 있어요.' },
+    { id: 'sea-hare', name: '군소', latin: 'Aplysia kurodai', icon: '🐌', rarity: '희귀', habitat: '송정 얕은 암반', facts: '군소는 해조류를 먹는 바다 달팽이예요. 위협을 받으면 보라색 액체를 내보내기도 해요.', guide: '독성이 있을 수 있으므로 손으로 만지거나 먹지 말고 눈으로만 관찰해요.' }
   ];
 
   const state = {
@@ -29,7 +29,9 @@
     quizDone: false,
     postsUnsubscribe: null,
     chatUnsubscribe: null,
-    profiles: []
+    profiles: [],
+    spawnSpecies: [...species],
+    location: null
   };
 
   function toast(message) {
@@ -140,8 +142,9 @@
 
   function spawnCreature() {
     if ($('#playScreen').classList.contains('hidden') || state.creatures.size >= 4) return;
-    const available = species.filter((item) => ![...state.creatures.values()].some((entry) => entry.species.id === item.id));
-    const selected = (available.length ? available : species)[Math.floor(Math.random() * (available.length || species.length))];
+    const pool = state.spawnSpecies.length ? state.spawnSpecies : species;
+    const available = pool.filter((item) => ![...state.creatures.values()].some((entry) => entry.species.id === item.id));
+    const selected = (available.length ? available : pool)[Math.floor(Math.random() * (available.length || pool.length))];
     const id = `${selected.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const element = document.createElement('button');
     element.type = 'button';
@@ -155,10 +158,17 @@
     moveCreature(entry);
     entry.moveTimer = setInterval(() => moveCreature(entry), 1500 + Math.random() * 800);
     entry.lifeTimer = setTimeout(() => removeCreature(id), 10000 + Math.random() * 6000);
-    element.addEventListener('click', () => {
+    element.addEventListener('click', async () => {
       element.classList.add('target');
       setTimeout(() => element.classList.remove('target'), 900);
-      $('#arenaStatus').textContent = `${selected.name}: 포획 원 안으로 들어올 때 버튼을 누르세요!`;
+      $('#arenaStatus').textContent = `${selected.name} 실제 사진을 찾는 중...`;
+      try {
+        const photo = await window.OceanAI.nextSpeciesPhoto(selected);
+        $('i', element).innerHTML = `<img src="${escapeHtml(photo.url)}" alt="${escapeHtml(selected.name)} 실제 사진">`;
+        $('#arenaStatus').textContent = `${selected.name}: 아이콘을 다시 누르면 다른 실제 사진이 나와요.`;
+      } catch (_) {
+        $('#arenaStatus').textContent = `${selected.name}: 포획 원 안으로 들어올 때 버튼을 누르세요!`;
+      }
     });
     $('#arenaStatus').textContent = `${selected.name} 출현! 움직임을 잘 살펴보세요.`;
     updateTargets();
@@ -202,13 +212,28 @@
     gain(isNew ? 60 : 20, isNew ? 80 : 25);
     const dialog = openDialog(isNew ? '새로운 생물 발견!' : '다시 만난 바다 친구!', 'CAPTURE SUCCESS', `
       <div class="caught-card">
-        <div class="caught-icon">${found.icon}</div>
+        <button class="caught-icon photo-swap" type="button" aria-label="${escapeHtml(found.name)} 실제 사진 바꾸기">${found.icon}</button>
         <h2>${found.name}</h2>
         <span class="reward">${isNew ? '+80 XP · 도감 신규 등록' : '+25 XP · 관찰 보너스'}</span>
         <p>${found.facts}</p>
         <div class="species-facts"><b>서식지</b> ${found.habitat}<br><b>관찰 포인트</b> ${found.guide}</div>
         <button class="dialog-primary caught-confirm" type="button">도감 확인하기</button>
       </div>`, 'caught-dialog');
+    const caughtIcon = $('.caught-icon', dialog.body);
+    const swapCaughtPhoto = async () => {
+      caughtIcon.classList.add('loading-photo');
+      try {
+        const photo = await window.OceanAI.nextSpeciesPhoto(found);
+        caughtIcon.innerHTML = `<img src="${escapeHtml(photo.url)}" alt="${escapeHtml(found.name)} 실제 사진">`;
+        caughtIcon.title = '누르면 다른 실제 사진';
+      } catch (_) {
+        caughtIcon.textContent = found.icon;
+      } finally {
+        caughtIcon.classList.remove('loading-photo');
+      }
+    };
+    caughtIcon.addEventListener('click', swapCaughtPhoto);
+    swapCaughtPhoto();
     $('.caught-confirm', dialog.body).addEventListener('click', () => {
       dialog.close();
       showTab('learn');
@@ -222,7 +247,21 @@
     collected.forEach((item) => {
       const card = document.createElement('article');
       card.tabIndex = 0;
-      card.innerHTML = `<i>${item.icon}</i><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.habitat)} · ${escapeHtml(item.rarity)}</small>`;
+      card.innerHTML = `<button class="species-thumb" type="button" aria-label="${escapeHtml(item.name)} 실제 사진 보기">${item.icon}</button><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.habitat)} · ${escapeHtml(item.rarity)}</small>`;
+      const thumb = $('.species-thumb', card);
+      thumb.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        thumb.classList.add('loading-photo');
+        try {
+          const photo = await window.OceanAI.nextSpeciesPhoto(item);
+          thumb.innerHTML = `<img src="${escapeHtml(photo.url)}" alt="${escapeHtml(item.name)} 실제 사진">`;
+          thumb.title = '누르면 다른 실제 사진';
+        } catch (_) {
+          toast('실제 사진을 잠시 불러오지 못했어요.');
+        } finally {
+          thumb.classList.remove('loading-photo');
+        }
+      });
       const open = () => showSpeciesDetail(item);
       card.addEventListener('click', open);
       card.addEventListener('keydown', (event) => { if (event.key === 'Enter') open(); });
@@ -237,9 +276,48 @@
     $('#collectionCount').textContent = `${collected.length}종 수집`;
   }
 
-  function showSpeciesDetail(item) {
-    openDialog(item.name, `${item.rarity} · 부산 해양 생물`, `
-      <div class="species-detail"><i>${item.icon}</i><h2>${escapeHtml(item.name)}</h2><p>${escapeHtml(item.facts)}</p><div class="species-facts"><b>주요 서식지</b><br>${escapeHtml(item.habitat)}<br><br><b>교육 포인트</b><br>${escapeHtml(item.guide)}</div></div>`);
+  async function showSpeciesDetail(item) {
+    const dialog = openDialog(item.name, `${item.rarity} · AI 생태 해설`, `
+      <div class="species-detail">
+        <button class="species-photo photo-swap loading-photo" type="button" aria-label="${escapeHtml(item.name)} 실제 사진 바꾸기">${item.icon}</button>
+        <h2>${escapeHtml(item.name)}</h2><em>${escapeHtml(item.latin || '')}</em>
+        <div class="species-story"><p>AI가 실제 생태 정보를 탐색하고 있어요...</p></div>
+        <div class="species-facts"><b>주요 서식지</b><br>${escapeHtml(item.habitat)}<br><br><b>안전한 관찰</b><br>${escapeHtml(item.guide)}</div>
+      </div>`);
+    const photoButton = $('.species-photo', dialog.body);
+    const story = $('.species-story', dialog.body);
+    const swapPhoto = async () => {
+      photoButton.classList.add('loading-photo');
+      try {
+        const photo = await window.OceanAI.nextSpeciesPhoto(item);
+        photoButton.innerHTML = `<img src="${escapeHtml(photo.url)}" alt="${escapeHtml(item.name)} 실제 사진">`;
+        photoButton.title = '누르면 다른 실제 사진';
+      } catch (_) {
+        photoButton.textContent = item.icon;
+      } finally {
+        photoButton.classList.remove('loading-photo');
+      }
+    };
+    photoButton.addEventListener('click', swapPhoto);
+    swapPhoto();
+    const fallbackLines = [
+      item.facts,
+      `${item.name}의 주요 관찰 지역은 ${item.habitat}입니다.`,
+      `학명은 ${item.latin || '자료 확인 중'}이며, 생김새와 행동을 함께 살펴보면 종을 구별하기 쉬워요.`,
+      item.guide,
+      '야생 생물은 잡거나 먹이를 주지 말고 충분한 거리를 두어 관찰해야 해요.'
+    ];
+    try {
+      const info = await window.OceanAI.request('species-info', {
+        name: item.name,
+        latin: item.latin,
+        habitat: item.habitat
+      });
+      const lines = Array.isArray(info.lines) && info.lines.length >= 5 ? info.lines : fallbackLines;
+      story.innerHTML = lines.slice(0, 7).map((line) => `<p>${escapeHtml(line)}</p>`).join('');
+    } catch (_) {
+      story.innerHTML = fallbackLines.map((line) => `<p>${escapeHtml(line)}</p>`).join('');
+    }
   }
 
   function showAllSpecies() {
@@ -417,6 +495,100 @@
     renderCollection();
   }
 
+  function weatherIcon(code) {
+    if ([0, 1].includes(code)) return '☀️';
+    if ([2, 3].includes(code)) return '⛅';
+    if ([45, 48].includes(code)) return '🌫️';
+    if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) return '🌧️';
+    if ([95, 96, 99].includes(code)) return '⛈️';
+    return '🌤️';
+  }
+
+  async function personalizeByLocation() {
+    try {
+      const position = await window.OceanAI.getPosition();
+      state.location = position;
+      const coordinateLabel = `${position.latitude.toFixed(3)}, ${position.longitude.toFixed(3)}`;
+      $('.arena-copy>span').textContent = `📍 내 위치 · ${coordinateLabel}`;
+      const [weather, local] = await Promise.all([
+        window.OceanAI.getWeather(position),
+        window.OceanAI.request('local-species', {
+          latitude: position.latitude,
+          longitude: position.longitude,
+          candidates: species.map(({ id, name, latin }) => ({ id, name, latin }))
+        }).catch(() => null)
+      ]);
+      const localIds = Array.isArray(local?.ids) ? local.ids : [];
+      const matched = species.filter((item) => localIds.includes(item.id));
+      if (matched.length >= 4) state.spawnSpecies = matched;
+      const wave = Number(weather.wave_height);
+      const seaTemperature = Number(weather.sea_surface_temperature);
+      const safe = (!Number.isFinite(wave) || wave < 1.2) && Number(weather.wind_speed_10m || 0) < 30;
+      $('#weatherIcon').textContent = weatherIcon(Number(weather.weather_code));
+      $('#weatherTitle').textContent = `내 위치 ${coordinateLabel} 날씨`;
+      $('#weatherDetail').textContent = [
+        `기온 ${Math.round(weather.temperature_2m)}°`,
+        Number.isFinite(seaTemperature) ? `수온 ${seaTemperature.toFixed(1)}°` : null,
+        Number.isFinite(wave) ? `파고 ${wave.toFixed(1)}m` : null,
+        `바람 ${Math.round(weather.wind_speed_10m || 0)}km/h`
+      ].filter(Boolean).join(' · ');
+      $('#weatherSafety').textContent = safe ? '좋음' : '주의';
+      $('#weatherSafety').classList.toggle('caution', !safe);
+      $('#arenaStatus').textContent = `현재 위치에서 자주 관찰되는 ${state.spawnSpecies.length}종을 찾는 중이에요.`;
+    } catch (error) {
+      $('#weatherTitle').textContent = '부산 바다 기본 날씨';
+      $('#weatherDetail').textContent = error.message || '위치 권한을 허용하면 실제 날씨를 표시해요.';
+      $('#weatherSafety').textContent = '권한 필요';
+    }
+  }
+
+  function bindQuiz(quiz) {
+    const choices = Array.isArray(quiz?.choices) && quiz.choices.length >= 3
+      ? quiz.choices.slice(0, 4)
+      : ['약 5년', '약 50년', '약 200년 이상'];
+    const correctIndex = Number.isInteger(quiz?.correctIndex) ? quiz.correctIndex : 2;
+    $('#quizQuestion').textContent = quiz?.question || '플라스틱 빨대가 바다에서 완전히 분해되는 데 걸리는 시간은?';
+    $('#answers').innerHTML = choices.map((choice, index) => `<button type="button" ${index === correctIndex ? 'data-correct' : ''}>${escapeHtml(choice)}</button>`).join('');
+    $('#quizFeedback').textContent = '정답을 골라 바다 지식을 채워보세요!';
+    state.quizDone = false;
+    $$('#answers button').forEach((button) => button.addEventListener('click', () => {
+      if (state.quizDone) return;
+      state.quizDone = true;
+      if (button.hasAttribute('data-correct')) {
+        button.classList.add('correct');
+        $('#quizFeedback').textContent = quiz?.explanation || '정답이에요! 작은 실천이 바다 생태계를 지켜요.';
+        gain(30, 30, '정답이에요! +30 XP');
+      } else {
+        button.classList.add('wrong');
+        const answer = choices[correctIndex] || '정답 보기';
+        $('#quizFeedback').textContent = `아쉬워요. 정답은 “${answer}”예요. ${quiz?.explanation || ''}`;
+      }
+    }));
+  }
+
+  async function loadAiQuiz() {
+    const fallback = {
+      question: '플라스틱 빨대가 바다에서 완전히 분해되는 데 걸리는 시간은?',
+      choices: ['약 5년', '약 50년', '약 200년 이상'],
+      correctIndex: 2,
+      explanation: '플라스틱은 잘 사라지지 않고 더 작은 미세플라스틱으로 남을 수 있어요.'
+    };
+    try {
+      const quiz = await window.OceanAI.request('quiz', {
+        nonce: `${Date.now()}-${Math.random()}`,
+        location: state.location || { name: '부산' }
+      });
+      bindQuiz(quiz);
+    } catch (_) {
+      const fallbacks = [
+        fallback,
+        { question: '바다거북이 비닐을 먹이로 착각하는 가장 큰 이유는?', choices: ['해파리와 모양이 비슷해서', '소리가 나서', '빛이 나서'], correctIndex: 0, explanation: '물속에서 떠다니는 비닐은 해파리처럼 보여 바다거북에게 위험해요.' },
+        { question: '조간대 생물을 관찰한 뒤 가장 올바른 행동은?', choices: ['집으로 가져간다', '원래 있던 자리에 둔다', '먹이를 준다'], correctIndex: 1, explanation: '생물이 살던 돌과 물의 위치를 그대로 지켜주는 것이 가장 좋아요.' }
+      ];
+      bindQuiz(fallbacks[Math.floor(Math.random() * fallbacks.length)]);
+    }
+  }
+
   $('#sailButton').addEventListener('click', () => {
     $('#startScreen').classList.add('hidden');
     $('#playScreen').classList.remove('hidden');
@@ -425,6 +597,7 @@
       spawnCreature();
       updateTargets();
     }, 350);
+    personalizeByLocation();
   });
   $$('[data-tab]').forEach((button) => button.addEventListener('click', () => showTab(button.dataset.tab)));
   $('#captureButton').addEventListener('click', captureCreature);
@@ -441,32 +614,39 @@
   $('#authButton').addEventListener('click', () => state.user ? window.OceanCloud?.signOut() : window.OceanCloud?.signIn());
   $('#communityLoginButton').addEventListener('click', () => state.user ? window.OceanCloud?.signOut() : window.OceanCloud?.signIn());
 
-  $('#trashFile').addEventListener('change', (event) => {
+  $('#trashFile').addEventListener('change', async (event) => {
     if (!event.target.files?.[0]) return;
     if (state.trash >= 3) {
       toast('오늘의 쓰레기 줍기 미션을 이미 완료했어요!');
       event.target.value = '';
       return;
     }
-    state.trash += 1;
-    $('#missionCount').textContent = `${state.trash}/3`;
-    gain(50, 35, `인증 완료! +50 씨앗 · +35 XP (${state.trash}/3)`);
-    if (state.trash === 3) setTimeout(() => gain(150, 100, '해변 정화 미션 완료! 보너스 +100 XP'), 500);
-    event.target.value = '';
-  });
-
-  $$('#answers button').forEach((button) => button.addEventListener('click', () => {
-    if (state.quizDone) return;
-    state.quizDone = true;
-    if (button.hasAttribute('data-correct')) {
-      button.classList.add('correct');
-      $('#quizFeedback').textContent = '정답! 플라스틱은 사라지지 않고 미세플라스틱으로 남을 수 있어요.';
-      gain(30, 30, '정답이에요! +30 XP');
-    } else {
-      button.classList.add('wrong');
-      $('#quizFeedback').textContent = '아쉬워요. 정답은 약 200년 이상이에요.';
+    const label = $('.trash-proof');
+    const original = label.textContent;
+    label.textContent = '🤖 AI가 쓰레기인지 판독 중...';
+    label.classList.add('checking');
+    try {
+      const photo = await window.OceanAI.prepareImage(event.target.files[0]);
+      const result = await window.OceanAI.request('trash', {
+        image: photo.data,
+        mimeType: photo.mimeType
+      });
+      if (!result.isTrash || Number(result.confidence || 0) < 55) {
+        toast(result.reason || '쓰레기로 확인되지 않아 수치가 올라가지 않았어요.');
+        return;
+      }
+      state.trash += 1;
+      $('#missionCount').textContent = `${state.trash}/3`;
+      gain(50, 35, `${result.item || '쓰레기'} 인증 완료! +50 씨앗 · +35 XP (${state.trash}/3)`);
+      if (state.trash === 3) setTimeout(() => gain(150, 100, '해변 정화 미션 완료! 보너스 +100 XP'), 500);
+    } catch (error) {
+      toast(error.message || 'AI 판독에 실패해 점수를 지급하지 않았어요.');
+    } finally {
+      label.textContent = original;
+      label.classList.remove('checking');
+      event.target.value = '';
     }
-  }));
+  });
 
   window.addEventListener('ocean-auth', (event) => updateAuthUI(event.detail?.user || null));
   window.addEventListener('ocean-progress-loaded', (event) => applyCloudProgress(event.detail));
@@ -475,4 +655,5 @@
   setInterval(spawnCreature, 3200);
   renderProgress();
   renderCollection();
+  loadAiQuiz();
 })();

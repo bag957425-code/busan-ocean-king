@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="ai-photo.css">
+  <link rel="stylesheet" href="ocean-ai.css">
 </head>
 <body>
   <main class="phone">
@@ -107,15 +108,15 @@
         </article>
 
         <article class="quiz-card">
-          <div class="quiz-top"><span>⚡ 오늘의 퀴즈</span><b>정답 +30 XP</b></div>
-          <h2>플라스틱 빨대가 바다에서 완전히 분해되는 데 걸리는 시간은?</h2>
-          <div class="answers" id="answers"><button type="button">약 5년</button><button type="button">약 50년</button><button type="button" data-correct>약 200년 이상</button></div>
-          <p id="quizFeedback">정답을 골라 바다 지식을 채워보세요!</p>
+          <div class="quiz-top"><span>⚡ AI 오늘의 퀴즈</span><b>정답 +30 XP</b></div>
+          <h2 id="quizQuestion">AI가 새로운 해양 퀴즈를 만들고 있어요...</h2>
+          <div class="answers" id="answers"></div>
+          <p id="quizFeedback">새로고침할 때마다 새로운 문제가 나와요.</p>
         </article>
 
         <div class="section-head collection-head"><div><h2>나의 해양 생물 도감</h2><small id="collectionCount">0종 수집</small></div><button id="showAllSpecies" type="button">전체 생물 보기</button></div>
         <div id="collectionGrid" class="book-grid" aria-live="polite"></div>
-        <article class="weather"><div><span>🌤</span><b>광안리 바다 날씨</b><small>수온 24° · 파고 0.4m · 자외선 보통</small></div><strong>안전<br><em>좋음</em></strong></article>
+        <article class="weather"><div><span id="weatherIcon">📍</span><b id="weatherTitle">현재 위치 날씨 확인 중</b><small id="weatherDetail">위치 권한을 허용하면 실제 날씨와 주변 생물을 알려드려요.</small></div><strong>실시간<br><em id="weatherSafety">대기</em></strong></article>
       </section>
 
       <section id="community" class="screen scroll-screen">
@@ -155,6 +156,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="firebase-auth.js"></script>
+  <script src="ocean-ai.js"></script>
   <script src="script.js"></script>
   <script src="ai-photo.js"></script>
 </body>

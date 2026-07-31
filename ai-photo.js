@@ -81,36 +81,13 @@
   }
 
   async function requestAnalysis(photo) {
-    const token = `${Date.now()}${Math.random().toString(36).slice(2)}`;
-    const frame = document.createElement('iframe');
-    const form = document.createElement('form');
-    const payload = document.createElement('textarea');
-    frame.name = `blueWaveUpload${token}`;
-    frame.hidden = true;
-    form.hidden = true;
-    form.method = 'POST';
-    form.action = AI_ENDPOINT;
-    form.target = frame.name;
-    payload.name = 'payload';
-    payload.value = JSON.stringify({ image: photo.data, mimeType: photo.mimeType, token });
-    form.appendChild(payload);
-    document.body.append(frame, form);
-    form.submit();
-
-    try {
-      for (let attempt = 0; attempt < 36; attempt += 1) {
-        await wait(attempt === 0 ? 700 : 900);
-        const response = await fetchResult(token);
-        if (!response.pending) {
-          if (!response.ok) throw new Error(response.error || 'AI 분석에 실패했어요.');
-          return response.result;
-        }
-      }
-      throw new Error('분석 시간이 길어지고 있어요. 잠시 후 다시 시도해 주세요.');
-    } finally {
-      frame.remove();
-      form.remove();
+    if (window.OceanAI) {
+      return window.OceanAI.request('identify', {
+        image: photo.data,
+        mimeType: photo.mimeType
+      });
     }
+    throw new Error('AI 기능을 불러오지 못했어요. 페이지를 새로고침해 주세요.');
   }
 
   function showResult(data) {
@@ -129,7 +106,9 @@
     if (!file) return;
     try {
       error.textContent = '';
-      const photo = await prepareImage(file);
+      const photo = window.OceanAI
+        ? await window.OceanAI.prepareImage(file)
+        : await prepareImage(file);
       preview.src = photo.previewUrl;
       preview.classList.remove('hidden');
       prompt.classList.add('hidden');

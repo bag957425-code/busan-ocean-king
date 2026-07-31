@@ -1,0 +1,13 @@
+.wild-creature i img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.species-thumb{width:100%;height:66px;border:0;border-radius:11px;background:linear-gradient(145deg,#dff6f6,#cbeaf5);display:grid;place-items:center;padding:0;color:inherit;font-size:34px;cursor:pointer;overflow:hidden}
+.species-thumb img,.species-photo img,.caught-icon img{width:100%;height:100%;object-fit:cover}
+.photo-swap{border:0;padding:0;overflow:hidden;cursor:pointer;background:#def3f7}
+.species-photo{width:180px;height:136px;margin:auto;border-radius:18px;display:grid;place-items:center;font-size:58px}
+.species-detail>em{display:block;margin:4px 0 12px;color:#698697;font-size:10px}
+.species-story{text-align:left}
+.species-story p{margin:0 0 8px;padding:8px 10px;border-left:3px solid #72c7d7;background:#f0f9fa;border-radius:0 9px 9px 0}
+.caught-card .caught-icon{width:160px;height:120px;margin:auto;border-radius:18px;display:grid;place-items:center;font-size:72px}
+.loading-photo{position:relative;opacity:.72}
+.loading-photo:after{content:'AI';position:absolute;right:6px;bottom:6px;padding:3px 5px;border-radius:7px;background:#164d6bd9;color:#fff;font-size:7px;font-weight:700}
+.trash-proof.checking{pointer-events:none;opacity:.75}
+.weather em.caution{color:#d0743e}

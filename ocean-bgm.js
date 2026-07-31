@@ -1,5 +1,6 @@
 (() => {
   const toggle = document.getElementById('bgmToggle');
+  const playToggle = document.getElementById('playBgmToggle');
   const hint = document.getElementById('bgmHint');
   const sailButton = document.getElementById('sailButton');
   if (!toggle) return;
@@ -12,6 +13,8 @@
   let scheduler = null;
   let nextSegmentTime = 0;
   let playing = false;
+  let mode = 'start';
+  const scheduledNodes = new Set();
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
 
   function setButtonState(active) {
@@ -20,7 +23,26 @@
     toggle.setAttribute('aria-pressed', String(active));
     toggle.setAttribute('aria-label', active ? '배경음악 끄기' : '배경음악 켜기');
     toggle.querySelector('span').textContent = active ? '🔊' : '🔇';
+    if (playToggle) {
+      playToggle.classList.toggle('playing', active);
+      playToggle.setAttribute('aria-pressed', String(active));
+      playToggle.setAttribute('aria-label', active ? '플레이 배경음악 끄기' : '플레이 배경음악 켜기');
+      playToggle.querySelector('span').textContent = active ? '🔊' : '🔇';
+    }
     if (active) hint?.classList.add('dismissed');
+  }
+
+  function trackNode(node) {
+    scheduledNodes.add(node);
+    node.addEventListener('ended', () => scheduledNodes.delete(node), { once: true });
+    return node;
+  }
+
+  function stopScheduledNodes() {
+    scheduledNodes.forEach((node) => {
+      try { node.stop(); } catch (_) {}
+    });
+    scheduledNodes.clear();
   }
 
   function createAudioGraph() {
@@ -56,7 +78,7 @@
   }
 
   function note(frequency, start, duration, type = 'sine', volume = 0.04, destination = music) {
-    const oscillator = context.createOscillator();
+    const oscillator = trackNode(context.createOscillator());
     const gain = context.createGain();
     const filter = context.createBiquadFilter();
     oscillator.type = type;
@@ -73,7 +95,7 @@
   }
 
   function seagull(start, shift = 0) {
-    const oscillator = context.createOscillator();
+    const oscillator = trackNode(context.createOscillator());
     const gain = context.createGain();
     const filter = context.createBiquadFilter();
     oscillator.type = 'sine';
@@ -94,7 +116,7 @@
 
   function shipHorn(start) {
     [73.42, 110, 146.83].forEach((frequency, index) => {
-      const oscillator = context.createOscillator();
+      const oscillator = trackNode(context.createOscillator());
       const gain = context.createGain();
       const filter = context.createBiquadFilter();
       oscillator.type = index === 0 ? 'sawtooth' : 'sine';
@@ -112,7 +134,39 @@
     });
   }
 
-  function scheduleSegment(start) {
+  function drum(start, accent = false) {
+    const oscillator = trackNode(context.createOscillator());
+    const gain = context.createGain();
+    const filter = context.createBiquadFilter();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(accent ? 132 : 105, start);
+    oscillator.frequency.exponentialRampToValueAtTime(accent ? 46 : 55, start + 0.24);
+    filter.type = 'lowpass';
+    filter.frequency.value = 260;
+    gain.gain.setValueAtTime(accent ? 0.12 : 0.075, start);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + (accent ? 0.72 : 0.46));
+    oscillator.connect(filter).connect(gain).connect(effects);
+    oscillator.start(start);
+    oscillator.stop(start + 0.76);
+
+    const noiseBuffer = context.createBuffer(1, Math.round(context.sampleRate * 0.18), context.sampleRate);
+    const noise = noiseBuffer.getChannelData(0);
+    for (let index = 0; index < noise.length; index += 1) noise[index] = (Math.random() * 2 - 1) * (1 - index / noise.length);
+    const noiseSource = trackNode(context.createBufferSource());
+    const noiseFilter = context.createBiquadFilter();
+    const noiseGain = context.createGain();
+    noiseSource.buffer = noiseBuffer;
+    noiseFilter.type = 'bandpass';
+    noiseFilter.frequency.value = accent ? 170 : 220;
+    noiseFilter.Q.value = 1.4;
+    noiseGain.gain.setValueAtTime(accent ? 0.055 : 0.03, start);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
+    noiseSource.connect(noiseFilter).connect(noiseGain).connect(effects);
+    noiseSource.start(start);
+    noiseSource.stop(start + 0.19);
+  }
+
+  function scheduleStartSegment(start) {
     const chords = [
       [146.83, 220, 293.66],
       [130.81, 196, 261.63],
@@ -133,6 +187,31 @@
     seagull(start + 13.4, -90);
   }
 
+  function schedulePlaySegment(start) {
+    const chords = [
+      [146.83, 174.61, 220],
+      [130.81, 164.81, 196],
+      [116.54, 146.83, 174.61],
+      [110, 138.59, 164.81]
+    ];
+    chords.forEach((chord, chordIndex) => {
+      const chordStart = start + chordIndex * 4;
+      chord.forEach((frequency, noteIndex) => {
+        note(frequency, chordStart, 4.45, noteIndex === 0 ? 'sawtooth' : 'triangle', noteIndex === 0 ? 0.022 : 0.017);
+      });
+      [0, 1.5, 3].forEach((offset, beatIndex) => drum(chordStart + offset, beatIndex === 0));
+      const pulse = [chord[1] * 2, chord[0] * 2, chord[2] * 1.5, chord[1] * 2.25];
+      pulse.forEach((frequency, step) => note(frequency, chordStart + 0.55 + step * 0.74, 0.72, 'triangle', 0.021));
+    });
+    drum(start + 14.7, true);
+    shipHorn(start + 11.9);
+  }
+
+  function scheduleSegment(start) {
+    if (mode === 'play') schedulePlaySegment(start);
+    else scheduleStartSegment(start);
+  }
+
   function keepScheduled() {
     if (!playing || !context) return;
     while (nextSegmentTime < context.currentTime + 20) {
@@ -141,13 +220,14 @@
     }
   }
 
-  async function start() {
+  async function start(requestedMode = mode) {
     if (!AudioContextClass) {
       hint.textContent = '이 브라우저에서는 배경음악을 재생할 수 없어요.';
       return;
     }
     createAudioGraph();
     await context.resume();
+    mode = requestedMode;
     nextSegmentTime = context.currentTime + 0.08;
     setButtonState(true);
     master.gain.cancelScheduledValues(context.currentTime);
@@ -163,6 +243,7 @@
     const closingContext = context;
     setButtonState(false);
     clearInterval(scheduler);
+    stopScheduledNodes();
     master.gain.cancelScheduledValues(context.currentTime);
     master.gain.setValueAtTime(Math.max(0.0001, master.gain.value), context.currentTime);
     master.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + fadeSeconds);
@@ -180,13 +261,38 @@
 
   toggle.addEventListener('click', () => {
     if (playing) pause();
-    else start();
+    else start(mode);
+  });
+
+  playToggle?.addEventListener('click', () => {
+    if (playing) pause();
+    else start('play');
   });
 
   document.addEventListener('pointerdown', (event) => {
     if (playing || event.target.closest('#bgmToggle')) return;
-    start();
+    start(mode);
   }, { once: true });
 
-  sailButton?.addEventListener('click', () => pause(1.8));
+  sailButton?.addEventListener('click', () => {
+    mode = 'play';
+    if (!playing || !context) {
+      start('play');
+      return;
+    }
+    clearInterval(scheduler);
+    stopScheduledNodes();
+    master.gain.cancelScheduledValues(context.currentTime);
+    master.gain.setValueAtTime(Math.max(0.0001, master.gain.value), context.currentTime);
+    master.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.48);
+    setTimeout(() => {
+      if (!playing || !context || mode !== 'play') return;
+      nextSegmentTime = context.currentTime + 0.04;
+      master.gain.cancelScheduledValues(context.currentTime);
+      master.gain.setValueAtTime(0.0001, context.currentTime);
+      master.gain.exponentialRampToValueAtTime(0.46, context.currentTime + 0.8);
+      keepScheduled();
+      scheduler = setInterval(keepScheduled, 5000);
+    }, 500);
+  });
 })();

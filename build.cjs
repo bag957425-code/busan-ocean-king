@@ -13,6 +13,7 @@ const assets = {
   '/gameplay-expansion.css': { body: read('gameplay-expansion.css'), type: 'text/css; charset=utf-8' },
   '/visual-refresh.css': { body: read('visual-refresh.css'), type: 'text/css; charset=utf-8' },
   '/experience-upgrade.css': { body: read('experience-upgrade.css'), type: 'text/css; charset=utf-8' },
+  '/reference-polish.css': { body: read('reference-polish.css'), type: 'text/css; charset=utf-8' },
   '/script.js': { body: read('script.js'), type: 'application/javascript; charset=utf-8' },
   '/ai-photo.js': { body: read('ai-photo.js'), type: 'application/javascript; charset=utf-8' },
   '/ocean-ai.js': { body: read('ocean-ai.js'), type: 'application/javascript; charset=utf-8' },

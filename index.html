@@ -16,7 +16,7 @@
   <meta name="twitter:image" content="https://bag957425-code.github.io/busan-ocean-king/og.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700;800&family=Jua&family=Noto+Sans+KR:wght@500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="ai-photo.css">
   <link rel="stylesheet" href="ocean-ai.css">
@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="gameplay-expansion.css">
   <link rel="stylesheet" href="visual-refresh.css">
   <link rel="stylesheet" href="experience-upgrade.css">
+  <link rel="stylesheet" href="reference-polish.css">
 </head>
 <body>
   <main class="phone">
@@ -50,6 +51,7 @@
         </button>
         <div class="header-actions">
           <span class="cloud-state" id="cloudState" title="저장 상태">체험 모드</span>
+          <button id="playBgmToggle" class="play-bgm-toggle" type="button" aria-pressed="false" aria-label="플레이 배경음악 켜기"><span>🔇</span></button>
           <button id="notificationButton" class="notification-button" type="button" aria-label="알림">
             🔔<b id="notificationBadge" class="hidden">0</b>
           </button>
@@ -61,7 +63,7 @@
         <div id="captureArena" class="capture-arena" aria-label="부산 해양 생물 포획 탐험장">
           <div class="arena-copy">
             <span>📍 부산 · 광안리 앞바다</span>
-            <h1>움직이는 생물이<br><em>포획 원</em>에 들어오면 잡아요!</h1>
+            <h1>광안리 탐험 세션<br><em>포획 원</em>에 들어오면 잡아요!</h1>
           </div>
           <div class="island island-one"></div>
           <div class="island island-two"></div>
@@ -145,11 +147,11 @@
         <div class="section-head collection-head"><div><h2>나의 해양 생물 도감</h2><small id="collectionCount">0종 수집 · 부산 해안 100종</small></div><button id="showAllSpecies" type="button">100종 보기</button></div>
         <div id="collectionGrid" class="book-grid" aria-live="polite"></div>
         <button id="showWasteCatalog" class="waste-catalog-button" type="button"><span>♻️</span><b>해양 쓰레기 7종 교육 목록</b><small>종류별 해양 환경 영향을 5줄 이상 알아보기</small></button>
-        <article class="weather"><div><span id="weatherIcon">📍</span><b id="weatherTitle">현재 위치 날씨 확인 중</b><small id="weatherDetail">위치 권한을 허용하면 실제 날씨와 주변 생물을 알려드려요.</small></div><strong>실시간<br><em id="weatherSafety">대기</em></strong></article>
       </section>
 
       <section id="community" class="screen scroll-screen">
         <div class="page-title community-title"><span>BUSAN OCEAN COMMUNITY</span><h1>함께 발견하고<br>바다 이야기를 나눠요</h1></div>
+        <article class="weather community-weather"><div><span id="weatherIcon">📍</span><b id="weatherTitle">현재 위치 날씨 확인 중</b><small id="weatherDetail">위치 권한을 허용하면 실제 날씨와 주변 생물을 알려드려요.</small></div><strong>실시간<br><em id="weatherSafety">대기</em></strong></article>
         <div class="auth-banner" id="authBanner">
           <div><span>☁️</span><p><b>Firebase 계정 연결</b><small>친구, 대화, 게시물과 도감을 안전하게 저장해요.</small></p></div>
           <button id="communityLoginButton" type="button">Google 로그인</button>
@@ -171,9 +173,9 @@
       </section>
 
       <nav class="bottom-nav">
-        <button class="nav-btn active" type="button" data-tab="explore"><i>◎</i><span>탐험</span></button>
-        <button class="nav-btn" type="button" data-tab="learn"><i>▦</i><span>도감·배움</span></button>
-        <button class="nav-btn" type="button" data-tab="community"><i>◌</i><span>커뮤니티</span></button>
+        <button class="nav-btn active" type="button" data-tab="explore"><i>🎣</i><span>탐험</span></button>
+        <button class="nav-btn" type="button" data-tab="learn"><i>📖</i><span>도감·배움</span></button>
+        <button class="nav-btn" type="button" data-tab="community"><i>👥</i><span>커뮤니티</span></button>
       </nav>
     </section>
 

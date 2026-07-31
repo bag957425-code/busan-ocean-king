@@ -91,7 +91,7 @@
       userRef.collection('species').get()
     ]);
     const progress = progressSnapshot.exists ? progressSnapshot.data() : {
-      level: 1, xp: 0, points: 0, trash: 0
+      level: 1, xp: 0, points: 0, trash: 0, difficulty: 'beginner'
     };
     if (!progressSnapshot.exists) {
       await userRef.set({
@@ -99,6 +99,7 @@
         xp: 0,
         points: 0,
         trash: 0,
+        difficulty: 'beginner',
         createdAt: serverTime(),
         updatedAt: serverTime()
       });
@@ -108,7 +109,8 @@
         level: Math.max(1, Number(progress.level) || 1),
         xp: Math.max(0, Number(progress.xp) || 0),
         points: Math.max(0, Number(progress.points) || 0),
-        trash: Math.max(0, Number(progress.trash) || 0)
+        trash: Math.max(0, Number(progress.trash) || 0),
+        difficulty: ['beginner', 'intermediate', 'advanced', 'master'].includes(progress.difficulty) ? progress.difficulty : 'beginner'
       },
       species: speciesSnapshot.docs.map((document) => document.data())
     });
@@ -216,6 +218,7 @@
         xp: Math.max(0, Number(progress.xp) || 0),
         points: Math.max(0, Number(progress.points) || 0),
         trash: Math.max(0, Math.min(5, Number(progress.trash) || 0)),
+        difficulty: ['beginner', 'intermediate', 'advanced', 'master'].includes(progress.difficulty) ? progress.difficulty : 'beginner',
         updatedAt: serverTime()
       }, { merge: true });
     },

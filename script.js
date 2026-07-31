@@ -4,7 +4,7 @@
   const XP_GOAL = 300;
   const TRASH_GOAL = 5;
 
-  const species = [
+  const legacySpecies = [
     { id: 'mackerel', name: '고등어', latin: 'Scomber japonicus', icon: '🐟', rarity: '흔함', habitat: '부산 연안과 외해', facts: '고등어는 부산을 대표하는 회유성 어류예요. 빠르게 헤엄치며 플랑크톤과 작은 물고기를 먹고 무리를 지어 이동해요.', guide: '부산공동어시장은 전국 고등어 유통의 중심지로 알려져 있어요.' },
     { id: 'rock-bream', name: '돌돔', latin: 'Oplegnathus fasciatus', icon: '🐠', rarity: '보통', habitat: '태종대·오륙도 암초', facts: '돌돔은 단단한 이빨로 성게와 조개껍데기를 깨 먹어요. 어린 개체는 검은 줄무늬가 선명해요.', guide: '암초 생태계의 먹이 관계를 보여주는 중요한 물고기예요.' },
     { id: 'seahorse', name: '가시해마', latin: 'Hippocampus histrix', icon: '🦄', rarity: '희귀', habitat: '부산 연안 해조류 숲', facts: '해마는 꼬리로 해조류를 붙잡고 생활하며 수컷이 알을 품는 특별한 물고기예요.', guide: '해조류 숲이 사라지면 살 곳도 함께 줄어들기 때문에 서식지 보호가 중요해요.' },
@@ -18,6 +18,22 @@
     { id: 'anchovy', name: '멸치', latin: 'Engraulis japonicus', icon: '🐟', rarity: '흔함', habitat: '기장 연안', facts: '멸치는 작은 몸으로 큰 무리를 이루며 많은 바닷새와 대형 물고기의 먹이가 돼요.', guide: '부산 기장에서는 봄철 멸치 어업과 멸치 축제로 지역 바다 문화를 만날 수 있어요.' },
     { id: 'sea-hare', name: '군소', latin: 'Aplysia kurodai', icon: '🐌', rarity: '희귀', habitat: '송정 얕은 암반', facts: '군소는 해조류를 먹는 바다 달팽이예요. 위협을 받으면 보라색 액체를 내보내기도 해요.', guide: '독성이 있을 수 있으므로 손으로 만지거나 먹지 말고 눈으로만 관찰해요.' }
   ];
+  const species = window.OceanCatalog?.species || legacySpecies;
+  const marineWastes = window.OceanCatalog?.wastes || [];
+  const mermaid = {
+    id: 'mermaid-bonus',
+    name: '인어',
+    icon: '🧜‍♀️',
+    kind: 'bonus',
+    rarity: '신비',
+    habitat: '부산 바다의 신비한 물결'
+  };
+  const difficulties = {
+    beginner: { name: '초급 탐험가', zone: 168, moveMin: 2100, moveRange: 900, transition: 1.35, maxEntities: 4, trashTarget: 1, trashChance: 0.10 },
+    intermediate: { name: '중급 탐험가', zone: 142, moveMin: 1450, moveRange: 750, transition: 0.9, maxEntities: 5, trashTarget: 2, trashChance: 0.18 },
+    advanced: { name: '고급 탐험가', zone: 116, moveMin: 900, moveRange: 550, transition: 0.62, maxEntities: 6, trashTarget: 3, trashChance: 0.28 },
+    master: { name: '마스터', zone: 92, moveMin: 520, moveRange: 380, transition: 0.38, maxEntities: 7, trashTarget: 4, trashChance: 0.42 }
+  };
 
   const state = {
     points: 0,
@@ -26,6 +42,8 @@
     trash: 0,
     collection: new Map(),
     creatures: new Map(),
+    difficulty: 'beginner',
+    xpBuffs: [],
     user: null,
     quizDone: false,
     postsUnsubscribe: null,
@@ -68,6 +86,62 @@
     $('#xpLeft').textContent = `다음 레벨까지 ${XP_GOAL - state.xp} XP`;
     $('#xpBar').style.width = `${Math.min(100, state.xp / XP_GOAL * 100)}%`;
     $('#pointTotal').textContent = state.points.toLocaleString();
+    renderBuffState();
+  }
+
+  function activeXpMultiplier() {
+    const now = Date.now();
+    state.xpBuffs = state.xpBuffs.filter((expiresAt) => expiresAt > now);
+    return 2 ** state.xpBuffs.length;
+  }
+
+  function renderBuffState() {
+    const element = $('#xpBuffState');
+    if (!element) return;
+    const multiplier = activeXpMultiplier();
+    if (multiplier === 1) {
+      element.classList.add('hidden');
+      return;
+    }
+    const remaining = Math.max(0, Math.ceil((Math.min(...state.xpBuffs) - Date.now()) / 1000));
+    element.textContent = `🧜‍♀️ XP ×${multiplier} · 다음 효과 종료 ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`;
+    element.classList.remove('hidden');
+  }
+
+  function addMermaidBuff() {
+    const expiresAt = Date.now() + 5 * 60 * 1000;
+    state.xpBuffs.push(expiresAt);
+    const multiplier = activeXpMultiplier();
+    renderBuffState();
+    setTimeout(() => {
+      const before = state.xpBuffs.length;
+      state.xpBuffs = state.xpBuffs.filter((time) => time > Date.now());
+      renderBuffState();
+      if (state.xpBuffs.length < before) toast('인어의 XP 두 배 효과 하나가 끝났어요.');
+    }, 5 * 60 * 1000 + 100);
+    return multiplier;
+  }
+
+  function difficultySettings() {
+    return difficulties[state.difficulty] || difficulties.beginner;
+  }
+
+  function applyDifficulty(value, persist = true) {
+    state.difficulty = difficulties[value] ? value : 'beginner';
+    const settings = difficultySettings();
+    const zone = $('#captureZone');
+    zone.style.width = `${settings.zone}px`;
+    zone.style.height = `${settings.zone}px`;
+    $('#creatureLayer').style.setProperty('--creature-move-duration', `${settings.transition}s`);
+    $('#difficultySelect').value = state.difficulty;
+    $('#difficultySummary').textContent = `${settings.name} · 포획 원 ${settings.zone}px · 동시 쓰레기 목표 ${settings.trashTarget}개`;
+    [...state.creatures.keys()].slice(settings.maxEntities).forEach((id) => removeCreature(id));
+    state.creatures.forEach((entry) => {
+      clearInterval(entry.moveTimer);
+      entry.moveTimer = setInterval(() => moveCreature(entry), settings.moveMin + Math.random() * settings.moveRange);
+    });
+    updateTargets();
+    if (persist) saveProgress();
   }
 
   async function saveProgress() {
@@ -77,7 +151,8 @@
         level: state.level,
         xp: state.xp,
         points: state.points,
-        trash: state.trash
+        trash: state.trash,
+        difficulty: state.difficulty
       });
     } catch (_) {
       $('#cloudState').textContent = '저장 대기';
@@ -86,8 +161,10 @@
   }
 
   function gain(points, xp, message) {
+    const multiplier = activeXpMultiplier();
+    const earnedXp = Math.round(xp * multiplier);
     state.points += points;
-    state.xp += xp;
+    state.xp += earnedXp;
     let leveledUp = false;
     while (state.xp >= XP_GOAL) {
       state.xp -= XP_GOAL;
@@ -97,7 +174,8 @@
     renderProgress();
     saveProgress();
     if (leveledUp) toast(`🎉 레벨 업! 레벨 ${state.level} 탐험가가 되었어요.`);
-    else if (message) toast(message);
+    else if (message) toast(multiplier > 1 ? `${message} · 인어 효과 XP ×${multiplier}` : message);
+    return earnedXp;
   }
 
   function openDialog(title, kicker, body, className = '') {
@@ -145,26 +223,47 @@
   }
 
   function spawnCreature() {
-    if ($('#playScreen').classList.contains('hidden') || state.creatures.size >= 4) return;
+    const settings = difficultySettings();
+    if ($('#playScreen').classList.contains('hidden') || state.creatures.size >= settings.maxEntities) return;
     const pool = state.spawnSpecies.length ? state.spawnSpecies : species;
-    const available = pool.filter((item) => ![...state.creatures.values()].some((entry) => entry.species.id === item.id));
-    const selected = (available.length ? available : pool)[Math.floor(Math.random() * (available.length || pool.length))];
+    const visibleIds = new Set([...state.creatures.values()].map((entry) => entry.species.id));
+    const visibleTrash = [...state.creatures.values()].filter((entry) => entry.species.kind === 'waste').length;
+    let selected;
+    if (Math.random() < 0.04 && !visibleIds.has(mermaid.id)) {
+      selected = mermaid;
+    } else if (marineWastes.length && (visibleTrash < settings.trashTarget || Math.random() < settings.trashChance)) {
+      const availableWaste = marineWastes.filter((item) => !visibleIds.has(item.id));
+      const wastePool = availableWaste.length ? availableWaste : marineWastes;
+      selected = wastePool[Math.floor(Math.random() * wastePool.length)];
+    } else {
+      const available = pool.filter((item) => !visibleIds.has(item.id));
+      const speciesPool = available.length ? available : pool;
+      selected = speciesPool[Math.floor(Math.random() * speciesPool.length)];
+    }
     const id = `${selected.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const element = document.createElement('button');
     element.type = 'button';
-    element.className = 'wild-creature';
+    element.className = `wild-creature ${selected.kind === 'waste' ? 'waste-creature' : selected.kind === 'bonus' ? 'bonus-creature' : ''}`;
     element.dataset.creatureId = id;
-    element.setAttribute('aria-label', `${selected.name}, 움직이는 해양 생물`);
+    element.setAttribute('aria-label', `${selected.name}, 움직이는 ${selected.kind === 'waste' ? '해양 쓰레기' : selected.kind === 'bonus' ? '보너스 대상' : '해양 생물'}`);
     element.innerHTML = `<i>${selected.icon}</i><small>${selected.name}</small>`;
     $('#creatureLayer').append(element);
     const entry = { id, species: selected, element, x: 0, y: 0 };
     state.creatures.set(id, entry);
     moveCreature(entry);
-    entry.moveTimer = setInterval(() => moveCreature(entry), 1500 + Math.random() * 800);
+    entry.moveTimer = setInterval(() => moveCreature(entry), settings.moveMin + Math.random() * settings.moveRange);
     entry.lifeTimer = setTimeout(() => removeCreature(id), 10000 + Math.random() * 6000);
     element.addEventListener('click', async () => {
       element.classList.add('target');
       setTimeout(() => element.classList.remove('target'), 900);
+      if (selected.kind === 'waste') {
+        $('#arenaStatus').textContent = `${selected.name}: 포획 원에 들어오면 잡아서 바다를 정화하세요!`;
+        return;
+      }
+      if (selected.kind === 'bonus') {
+        $('#arenaStatus').textContent = '신비한 인어예요! 포획하면 5분 동안 XP 효과가 중첩돼요.';
+        return;
+      }
       $('#arenaStatus').textContent = `${selected.name} 실제 사진을 찾는 중...`;
       try {
         const photo = await window.OceanAI.nextSpeciesPhoto(selected);
@@ -175,7 +274,11 @@
         $('#arenaStatus').textContent = `${selected.name}: 포획 원 안으로 들어올 때 버튼을 누르세요!`;
       }
     });
-    $('#arenaStatus').textContent = `${selected.name} 출현! 움직임을 잘 살펴보세요.`;
+    $('#arenaStatus').textContent = selected.kind === 'waste'
+      ? `${selected.name} 발견! 포획해서 바다를 정화하세요.`
+      : selected.kind === 'bonus'
+        ? '🧜‍♀️ 인어 출현! 놓치기 전에 포획하세요.'
+        : `${selected.name} 출현! 움직임을 잘 살펴보세요.`;
     updateTargets();
   }
 
@@ -208,19 +311,38 @@
     }
     const found = target.entry.species;
     removeCreature(target.entry.id, true);
+    if (found.kind === 'bonus') {
+      const multiplier = addMermaidBuff();
+      const dialog = openDialog('신비한 인어를 만났어요!', 'MERMAID XP BOOST', `
+        <div class="caught-card mermaid-card">
+          <div class="bonus-symbol">🧜‍♀️</div>
+          <h2>5분간 XP ×${multiplier}</h2>
+          <span class="reward">인어 효과는 여러 번 중첩할 수 있어요</span>
+          <p>인어는 생물 도감에 등록되지 않아요. 효과가 유지되는 동안 퀴즈·포획·정화 활동에서 얻는 모든 XP가 증가해요.</p>
+          <button class="dialog-primary caught-confirm" type="button">효과 사용하기</button>
+        </div>`, 'caught-dialog');
+      $('.caught-confirm', dialog.body).addEventListener('click', dialog.close);
+      toast(`🧜‍♀️ 인어 효과 발동! 현재 XP ×${multiplier}`);
+      return;
+    }
+    if (found.kind === 'waste') {
+      const earnedXp = gain(30, 25, `${found.name} 정화 성공! +30 씨앗`);
+      openWasteDetail(found, true, earnedXp);
+      return;
+    }
     const isNew = !state.collection.has(found.id);
     state.collection.set(found.id, found);
     renderCollection();
     if (window.OceanCloud && state.user) {
       try { await window.OceanCloud.addSpecies(found); } catch (_) { toast('도감 저장이 잠시 지연되고 있어요.'); }
     }
-    gain(isNew ? 60 : 20, isNew ? 80 : 25);
+    const earnedXp = gain(isNew ? 60 : 20, isNew ? 80 : 25);
     const dialog = openDialog(isNew ? '새로운 생물 발견!' : '다시 만난 바다 친구!', 'CAPTURE SUCCESS', `
       <div class="caught-card">
         <button class="caught-icon photo-swap" type="button" aria-label="${escapeHtml(found.name)} 실제 사진 바꾸기">${found.icon}</button>
         <a class="photo-credit hidden" target="_blank" rel="noopener noreferrer"></a>
         <h2>${found.name}</h2>
-        <span class="reward">${isNew ? '+80 XP · 도감 신규 등록' : '+25 XP · 관찰 보너스'}</span>
+        <span class="reward">+${earnedXp} XP · ${isNew ? '도감 신규 등록' : '관찰 보너스'}</span>
         <p>${found.facts}</p>
         <div class="species-facts"><b>서식지</b> ${found.habitat}<br><b>관찰 포인트</b> ${found.guide}</div>
         <button class="dialog-primary caught-confirm" type="button">도감 확인하기</button>
@@ -283,7 +405,7 @@
       locked.innerHTML = '<i>?</i><b>미발견 생물</b><small>탐험 화면에서 포획하세요</small>';
       grid.append(locked);
     }
-    $('#collectionCount').textContent = `${collected.length}종 수집`;
+    $('#collectionCount').textContent = `${collected.length} / ${species.length}종 수집`;
   }
 
   async function showSpeciesDetail(item) {
@@ -335,12 +457,48 @@
     }
   }
 
+  function openWasteDetail(item, captured = false, earnedXp = 0) {
+    const lines = Array.isArray(item.impacts) ? item.impacts.slice(0, 7) : [];
+    const dialog = openDialog(item.name, captured ? 'OCEAN CLEAN-UP SUCCESS' : 'MARINE LITTER GUIDE', `
+      <div class="waste-detail">
+        <div class="waste-detail-icon">${escapeHtml(item.icon)}</div>
+        ${captured ? `<span class="reward">정화 보상 +30 씨앗 · +${earnedXp} XP</span>` : ''}
+        <h3>해양 환경에 미치는 영향</h3>
+        <ol>${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ol>
+        <div class="species-facts"><b>안전한 수거</b><br>맨손으로 만지지 말고 집게와 장갑을 사용하세요. 날카롭거나 정체를 알 수 없는 물체는 보호자 또는 관리기관에 알려요.</div>
+        <button class="dialog-primary waste-confirm" type="button">${captured ? '정화 완료' : '확인'}</button>
+      </div>`);
+    $('.waste-confirm', dialog.body).addEventListener('click', dialog.close);
+  }
+
   function showAllSpecies() {
     const cards = species.map((item) => {
       const caught = state.collection.has(item.id);
-      return `<article class="profile-row"><span>${caught ? item.icon : '❔'}</span><div><b>${caught ? escapeHtml(item.name) : '아직 만나지 못한 생물'}</b><small>${caught ? `${escapeHtml(item.habitat)} · ${escapeHtml(item.rarity)}` : '부산 바다를 탐험해 발견하세요'}</small></div></article>`;
+      return `<article class="profile-row catalog-row">
+        <span>${item.icon}</span>
+        <div><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.habitat)} · ${escapeHtml(item.rarity)} · ${caught ? '도감 등록' : '미발견'}</small></div>
+        <button type="button" data-species-detail="${escapeHtml(item.id)}">AI 탐색</button>
+      </article>`;
     }).join('');
-    openDialog('부산 생물 전체 목록', `${state.collection.size} / ${species.length}종 발견`, `<div class="profile-list">${cards}</div>`);
+    const dialog = openDialog('부산 해안 생물 100종', `${state.collection.size} / ${species.length}종 발견 · 모든 종 AI 탐색 가능`, `<div class="profile-list catalog-list">${cards}</div>`);
+    $$('[data-species-detail]', dialog.body).forEach((button) => button.addEventListener('click', () => {
+      const item = species.find((candidate) => candidate.id === button.dataset.speciesDetail);
+      if (item) showSpeciesDetail(item);
+    }));
+  }
+
+  function showWasteCatalog() {
+    const cards = marineWastes.map((item) => `
+      <article class="profile-row catalog-row waste-catalog-row">
+        <span>${item.icon}</span>
+        <div><b>${escapeHtml(item.name)}</b><small>현실의 해안에서 자주 발견되는 해양 쓰레기 · 영향 설명 ${item.impacts.length}줄</small></div>
+        <button type="button" data-waste-detail="${escapeHtml(item.id)}">영향 보기</button>
+      </article>`).join('');
+    const dialog = openDialog('해양 쓰레기 7종', 'MARINE LITTER ENCYCLOPEDIA', `<div class="dialog-note">탐험 화면에서 쓰레기를 포획하면 정화 XP와 씨앗을 받을 수 있어요.</div><div class="profile-list catalog-list">${cards}</div>`);
+    $$('[data-waste-detail]', dialog.body).forEach((button) => button.addEventListener('click', () => {
+      const item = marineWastes.find((candidate) => candidate.id === button.dataset.wasteDetail);
+      if (item) openWasteDetail(item);
+    }));
   }
 
   function requireLogin(action = '이 기능') {
@@ -720,6 +878,7 @@
     state.xp = Math.max(0, Math.min(XP_GOAL - 1, Number(progress.xp) || 0));
     state.points = Math.max(0, Number(progress.points) || 0);
     state.trash = Math.max(0, Math.min(TRASH_GOAL, Number(progress.trash) || 0));
+    applyDifficulty(progress.difficulty || 'beginner', false);
     state.collection.clear();
     (detail?.species || []).forEach((saved) => {
       const full = species.find((item) => item.id === saved.id) || saved;
@@ -844,6 +1003,13 @@
   $$('[data-tab]').forEach((button) => button.addEventListener('click', () => showTab(button.dataset.tab)));
   $('#captureButton').addEventListener('click', captureCreature);
   $('#showAllSpecies').addEventListener('click', showAllSpecies);
+  $('#showWasteCatalog').addEventListener('click', showWasteCatalog);
+  $('#difficultySelect').addEventListener('change', (event) => {
+    applyDifficulty(event.target.value);
+    const settings = difficultySettings();
+    toast(`${settings.name} 난이도로 변경했어요.`);
+    for (let index = state.creatures.size; index < settings.maxEntities; index += 1) spawnCreature();
+  });
   $('#friendButton').addEventListener('click', openFriends);
   $('#openChatButton').addEventListener('click', openChat);
   $('#newPostButton').addEventListener('click', openPostComposer);
@@ -896,7 +1062,9 @@
   window.addEventListener('ocean-progress-loaded', (event) => applyCloudProgress(event.detail));
   window.addEventListener('ocean-cloud-error', (event) => toast(event.detail?.message || 'Firebase 연결을 확인해 주세요.'));
   window.addEventListener('resize', updateTargets);
-  setInterval(spawnCreature, 3200);
+  setInterval(spawnCreature, 1200);
+  setInterval(renderBuffState, 1000);
+  applyDifficulty('beginner', false);
   renderProgress();
   renderCollection();
   loadAiQuiz();

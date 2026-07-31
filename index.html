@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="ai-photo.css">
   <link rel="stylesheet" href="ocean-ai.css">
   <link rel="stylesheet" href="social-features.css">
+  <link rel="stylesheet" href="gameplay-expansion.css">
 </head>
 <body>
   <main class="phone">
@@ -54,11 +55,20 @@
           <div class="current-lines" aria-hidden="true"></div>
           <div id="captureZone" class="capture-zone" aria-hidden="true"><span>포획 구역</span></div>
           <div id="creatureLayer" class="creature-layer"></div>
-          <div class="arena-status"><i id="liveDot"></i><span id="arenaStatus">부산 토종 생물을 찾는 중...</span></div>
+          <div class="arena-status"><i id="liveDot"></i><span id="arenaStatus">부산 해안 생물과 쓰레기를 찾는 중...</span></div>
           <button id="captureButton" class="capture-button" type="button"><span>◎</span><b>포획</b></button>
         </div>
 
         <section class="panel progress-panel">
+          <div class="difficulty-card">
+            <div><b>탐험 난이도</b><small id="difficultySummary">초급 탐험가 · 넓은 포획 원 · 쓰레기 1개 이상</small></div>
+            <select id="difficultySelect" aria-label="탐험 난이도">
+              <option value="beginner">초급 탐험가</option>
+              <option value="intermediate">중급 탐험가</option>
+              <option value="advanced">고급 탐험가</option>
+              <option value="master">마스터</option>
+            </select>
+          </div>
           <div class="level-card">
             <div class="level-badge" id="levelNumber">1</div>
             <div class="level-copy">
@@ -68,6 +78,7 @@
             </div>
             <div class="seed-total"><span>🪙</span><b id="pointTotal">0</b></div>
           </div>
+          <div id="xpBuffState" class="xp-buff-state hidden" aria-live="polite"></div>
           <div class="section-head"><h2>오늘의 블루 미션</h2><button type="button" data-tab="learn">전체 보기</button></div>
           <article class="mission" id="missionCard">
             <div class="mission-icon">🧤</div>
@@ -118,8 +129,9 @@
           <p id="quizFeedback">새로고침할 때마다 새로운 문제가 나와요.</p>
         </article>
 
-        <div class="section-head collection-head"><div><h2>나의 해양 생물 도감</h2><small id="collectionCount">0종 수집</small></div><button id="showAllSpecies" type="button">전체 생물 보기</button></div>
+        <div class="section-head collection-head"><div><h2>나의 해양 생물 도감</h2><small id="collectionCount">0종 수집 · 부산 해안 100종</small></div><button id="showAllSpecies" type="button">100종 보기</button></div>
         <div id="collectionGrid" class="book-grid" aria-live="polite"></div>
+        <button id="showWasteCatalog" class="waste-catalog-button" type="button"><span>♻️</span><b>해양 쓰레기 7종 교육 목록</b><small>종류별 해양 환경 영향을 5줄 이상 알아보기</small></button>
         <article class="weather"><div><span id="weatherIcon">📍</span><b id="weatherTitle">현재 위치 날씨 확인 중</b><small id="weatherDetail">위치 권한을 허용하면 실제 날씨와 주변 생물을 알려드려요.</small></div><strong>실시간<br><em id="weatherSafety">대기</em></strong></article>
       </section>
 
@@ -160,6 +172,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="firebase-auth.js"></script>
+  <script src="ocean-catalog.js"></script>
   <script src="ocean-ai.js"></script>
   <script src="script.js"></script>
   <script src="ai-photo.js"></script>

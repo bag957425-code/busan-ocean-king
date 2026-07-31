@@ -101,11 +101,19 @@
       order: 'desc',
       order_by: 'id'
     });
-    const response = await fetch(`https://api.inaturalist.org/v1/observations?${params}`, {
-      headers: { Accept: 'application/json' }
-    });
-    if (!response.ok) throw new Error('살아있는 생물 관찰 사진을 불러오지 못했어요.');
-    const data = await response.json();
+    const fetchObservations = async () => {
+      const response = await fetch(`https://api.inaturalist.org/v1/observations?${params}`, {
+        headers: { Accept: 'application/json' }
+      });
+      if (!response.ok) throw new Error('살아있는 생물 관찰 사진을 불러오지 못했어요.');
+      return response.json();
+    };
+    let data = await fetchObservations();
+    if (!(data.results || []).length) {
+      params.delete('term_id');
+      params.delete('term_value_id');
+      data = await fetchObservations();
+    }
     const photos = (data.results || []).flatMap((observation) =>
       (observation.observation_photos || []).map(({ photo }) => ({
         url: photo?.url?.replace('/square.', '/large.'),

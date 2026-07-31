@@ -29,10 +29,10 @@
     habitat: '부산 바다의 신비한 물결'
   };
   const difficulties = {
-    beginner: { name: '초급 탐험가', zone: 168, moveMin: 2100, moveRange: 900, transition: 1.35, zoneStay: 2000, cooldown: 500, maxEntities: 4, trashTarget: 1, trashChance: 0.10 },
-    intermediate: { name: '중급 탐험가', zone: 142, moveMin: 1450, moveRange: 750, transition: 0.9, zoneStay: 1000, cooldown: 1000, maxEntities: 5, trashTarget: 2, trashChance: 0.18 },
-    advanced: { name: '고급 탐험가', zone: 116, moveMin: 900, moveRange: 550, transition: 0.62, zoneStay: 500, cooldown: 2000, maxEntities: 6, trashTarget: 3, trashChance: 0.28 },
-    master: { name: '마스터', zone: 92, moveMin: 520, moveRange: 380, transition: 0.38, zoneStay: 100, cooldown: 3000, maxEntities: 7, trashTarget: 4, trashChance: 0.42 }
+    beginner: { name: '초급 탐험가', zone: 168, moveMin: 2100, moveRange: 900, transition: 1.35, zoneStay: 1000, cooldown: 500, maxEntities: 4, trashTarget: 1, trashChance: 0.10 },
+    intermediate: { name: '중급 탐험가', zone: 142, moveMin: 1450, moveRange: 750, transition: 0.9, zoneStay: 500, cooldown: 1000, maxEntities: 5, trashTarget: 2, trashChance: 0.18 },
+    advanced: { name: '고급 탐험가', zone: 116, moveMin: 900, moveRange: 550, transition: 0.62, zoneStay: 100, cooldown: 2000, maxEntities: 6, trashTarget: 3, trashChance: 0.28 },
+    master: { name: '마스터', zone: 92, moveMin: 520, moveRange: 380, transition: 0.38, zoneStay: 1, cooldown: 3000, maxEntities: 7, trashTarget: 4, trashChance: 0.42 }
   };
 
   const state = {

@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const root = __dirname;
 const read = (name) => fs.readFileSync(path.join(root, name), 'utf8');
+const readBinary = (name) => fs.readFileSync(path.join(root, name)).toString('base64');
 const assets = {
   '/': { body: read('index.html'), type: 'text/html; charset=utf-8' },
   '/index.html': { body: read('index.html'), type: 'text/html; charset=utf-8' },
@@ -11,13 +12,16 @@ const assets = {
   '/social-features.css': { body: read('social-features.css'), type: 'text/css; charset=utf-8' },
   '/gameplay-expansion.css': { body: read('gameplay-expansion.css'), type: 'text/css; charset=utf-8' },
   '/visual-refresh.css': { body: read('visual-refresh.css'), type: 'text/css; charset=utf-8' },
+  '/experience-upgrade.css': { body: read('experience-upgrade.css'), type: 'text/css; charset=utf-8' },
   '/script.js': { body: read('script.js'), type: 'application/javascript; charset=utf-8' },
   '/ai-photo.js': { body: read('ai-photo.js'), type: 'application/javascript; charset=utf-8' },
   '/ocean-ai.js': { body: read('ocean-ai.js'), type: 'application/javascript; charset=utf-8' },
+  '/ocean-bgm.js': { body: read('ocean-bgm.js'), type: 'application/javascript; charset=utf-8' },
   '/firebase-auth.js': { body: read('firebase-auth.js'), type: 'application/javascript; charset=utf-8' },
-  '/ocean-catalog.js': { body: read('ocean-catalog.js'), type: 'application/javascript; charset=utf-8' }
+  '/ocean-catalog.js': { body: read('ocean-catalog.js'), type: 'application/javascript; charset=utf-8' },
+  '/og.png': { body: readBinary('og.png'), type: 'image/png', encoding: 'base64' }
 };
-const worker = `const assets=${JSON.stringify(assets)};export default{fetch(request){const url=new URL(request.url);const asset=assets[url.pathname]||assets['/'];return new Response(asset.body,{headers:{'content-type':asset.type,'cache-control':url.pathname==='/'?'no-cache':'public, max-age=300'}})}};`;
+const worker = `const assets=${JSON.stringify(assets)};const decode=(value)=>{const raw=atob(value),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i+=1)bytes[i]=raw.charCodeAt(i);return bytes};export default{fetch(request){const url=new URL(request.url);const asset=assets[url.pathname]||assets['/'];let body=asset.encoding==='base64'?decode(asset.body):asset.body;if(asset.type.startsWith('text/html'))body=body.replaceAll('https://bag957425-code.github.io/busan-ocean-king/og.png',url.origin+'/og.png');return new Response(body,{headers:{'content-type':asset.type,'cache-control':url.pathname==='/'?'no-cache':'public, max-age=300'}})}};`;
 fs.mkdirSync(path.join(root, 'dist', 'server'), { recursive: true });
 fs.writeFileSync(path.join(root, 'dist', 'server', 'index.js'), worker);
 fs.mkdirSync(path.join(root, 'dist', '.openai'), { recursive: true });

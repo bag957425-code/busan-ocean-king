@@ -107,6 +107,7 @@
         email: user.email || '',
         photoURL: user.photoURL || '',
         avatar: '🌊',
+        avatarImage: '',
         residence: '',
         location: '',
         age: null,
@@ -178,6 +179,7 @@
       fromUid: user.uid,
       actorName: actor.nickname || actor.displayName || '바다 탐험가',
       actorAvatar: actor.avatar || '🌊',
+      actorAvatarImage: actor.avatarImage || '',
       type,
       text: String(text || '').slice(0, 160),
       referenceId,
@@ -225,9 +227,13 @@
       const residence = String(input.residence || '').trim().slice(0, 40);
       const age = Math.round(Number(input.age));
       const bio = String(input.bio || '').trim().slice(0, 300);
+      const avatarImage = String(input.avatarImage || '');
       if (nickname.length < 2) throw new Error('닉네임은 두 글자 이상 입력해 주세요.');
       if (!residence) throw new Error('거주지를 입력해 주세요.');
       if (!Number.isFinite(age) || age < 1 || age > 120) throw new Error('나이는 1세부터 120세 사이로 입력해 주세요.');
+      if (avatarImage && (!/^data:image\/jpeg;base64,[a-z0-9+/=]+$/i.test(avatarImage) || avatarImage.length > 260000)) {
+        throw new Error('프로필 사진 형식이나 용량을 확인해 주세요.');
+      }
       const profile = {
         uid: user.uid,
         nickname,
@@ -237,6 +243,7 @@
         age,
         bio,
         avatar: input.avatar || profileCache?.avatar || '🌊',
+        avatarImage,
         email: user.email || '',
         photoURL: user.photoURL || '',
         profileComplete: true,
@@ -290,6 +297,7 @@
         authorId: user.uid,
         authorName: actor.nickname || actor.displayName || '바다 탐험가',
         avatar: actor.avatar || '🌊',
+        avatarImage: actor.avatarImage || '',
         title: String(post.title || '').slice(0, 80),
         body: String(post.body || '').slice(0, 1000),
         location: String(post.location || actor.residence || '부산').slice(0, 30),
@@ -343,6 +351,7 @@
         authorId: user.uid,
         authorName: actor.nickname || actor.displayName || '바다 탐험가',
         avatar: actor.avatar || '🌊',
+        avatarImage: actor.avatarImage || '',
         text: body,
         createdAt: serverTime()
       });

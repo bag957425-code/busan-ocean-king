@@ -29,10 +29,10 @@
     habitat: '부산 바다의 신비한 물결'
   };
   const difficulties = {
-    beginner: { name: '초급 탐험가', zone: 168, moveMin: 2100, moveRange: 900, transition: 1.35, maxEntities: 4, trashTarget: 1, trashChance: 0.10 },
-    intermediate: { name: '중급 탐험가', zone: 142, moveMin: 1450, moveRange: 750, transition: 0.9, maxEntities: 5, trashTarget: 2, trashChance: 0.18 },
-    advanced: { name: '고급 탐험가', zone: 116, moveMin: 900, moveRange: 550, transition: 0.62, maxEntities: 6, trashTarget: 3, trashChance: 0.28 },
-    master: { name: '마스터', zone: 92, moveMin: 520, moveRange: 380, transition: 0.38, maxEntities: 7, trashTarget: 4, trashChance: 0.42 }
+    beginner: { name: '초급 탐험가', zone: 168, moveMin: 2100, moveRange: 900, transition: 1.35, zoneStay: 3000, cooldown: 500, maxEntities: 4, trashTarget: 1, trashChance: 0.10 },
+    intermediate: { name: '중급 탐험가', zone: 142, moveMin: 1450, moveRange: 750, transition: 0.9, zoneStay: 2000, cooldown: 1000, maxEntities: 5, trashTarget: 2, trashChance: 0.18 },
+    advanced: { name: '고급 탐험가', zone: 116, moveMin: 900, moveRange: 550, transition: 0.62, zoneStay: 1000, cooldown: 2000, maxEntities: 6, trashTarget: 3, trashChance: 0.28 },
+    master: { name: '마스터', zone: 92, moveMin: 520, moveRange: 380, transition: 0.38, zoneStay: 500, cooldown: 3000, maxEntities: 7, trashTarget: 4, trashChance: 0.42 }
   };
 
   const state = {
@@ -72,6 +72,53 @@
     return String(value).replace(/[&<>"']/g, (character) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
     })[character]);
+  }
+
+  function safeAvatarImage(value = '') {
+    const image = String(value || '');
+    if (/^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=]+$/i.test(image)) return image;
+    if (/^https:\/\/[^\s"'<>]+$/i.test(image)) return image;
+    return '';
+  }
+
+  function avatarMarkup(profile = {}, alt = '프로필 사진') {
+    const image = safeAvatarImage(profile.avatarImage);
+    if (image) return `<img src="${escapeHtml(image)}" alt="${escapeHtml(alt)}">`;
+    return `<span aria-hidden="true">${escapeHtml(profile.avatar || '🌊')}</span>`;
+  }
+
+  function compressProfileImage(file) {
+    return new Promise((resolve, reject) => {
+      if (!file || !/^image\//.test(file.type)) return reject(new Error('사진 파일을 선택해 주세요.'));
+      if (file.size > 12 * 1024 * 1024) return reject(new Error('12MB 이하의 사진을 선택해 주세요.'));
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('사진을 읽지 못했어요.'));
+      reader.onload = () => {
+        const image = new Image();
+        image.onerror = () => reject(new Error('지원하지 않는 사진 형식이에요.'));
+        image.onload = () => {
+          const maxSize = 256;
+          const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(image.width * scale));
+          canvas.height = Math.max(1, Math.round(image.height * scale));
+          const context = canvas.getContext('2d');
+          context.fillStyle = '#e8f7ff';
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          let quality = 0.84;
+          let result = canvas.toDataURL('image/jpeg', quality);
+          while (result.length > 230000 && quality > 0.48) {
+            quality -= 0.08;
+            result = canvas.toDataURL('image/jpeg', quality);
+          }
+          if (result.length > 260000) return reject(new Error('사진 용량을 줄이지 못했어요. 다른 사진을 선택해 주세요.'));
+          resolve(result);
+        };
+        image.src = String(reader.result);
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   function showTab(id) {
@@ -136,7 +183,7 @@
     zone.style.height = `${settings.zone}px`;
     $('#creatureLayer').style.setProperty('--creature-move-duration', `${settings.transition}s`);
     $('#difficultySelect').value = state.difficulty;
-    $('#difficultySummary').textContent = `${settings.name} · 포획 원 ${settings.zone}px · 동시 쓰레기 목표 ${settings.trashTarget}개`;
+    $('#difficultySummary').textContent = `${settings.name} · 원 안 ${settings.zoneStay / 1000}초 · 포획 쿨타임 ${settings.cooldown / 1000}초`;
     [...state.creatures.keys()].slice(settings.maxEntities).forEach((id) => removeCreature(id));
     updateTargets();
     state.creatures.forEach((entry) => restartCreatureMovement(entry));
@@ -201,19 +248,32 @@
     return { x: 4 + Math.random() * 82, y: 4 + Math.random() * 72 };
   }
 
+  function positionInsideCaptureZone(entry, position) {
+    const layer = $('#creatureLayer').getBoundingClientRect();
+    const zone = $('#captureZone').getBoundingClientRect();
+    const centerX = layer.left + position.x / 100 * layer.width + entry.element.offsetWidth / 2;
+    const centerY = layer.top + position.y / 100 * layer.height + entry.element.offsetHeight / 2;
+    const radius = zone.width / 2;
+    return Math.hypot(centerX - (zone.left + radius), centerY - (zone.top + radius)) <= radius - 8;
+  }
+
   function moveCreature(entry) {
     if (!entry.element.isConnected) return;
     const position = randomPosition();
     entry.x = position.x;
     entry.y = position.y;
+    entry.destinationInsideZone = positionInsideCaptureZone(entry, position);
     entry.element.style.transform = `translate(${position.x / 100 * $('#creatureLayer').clientWidth}px, ${position.y / 100 * $('#creatureLayer').clientHeight}px)`;
-    updateTargets();
+    clearTimeout(entry.targetTimer);
+    entry.targetTimer = setTimeout(updateTargets, difficultySettings().transition * 1000 + 20);
+    return entry.destinationInsideZone;
   }
 
   function placeCreature(entry) {
     const position = randomPosition();
     entry.x = position.x;
     entry.y = position.y;
+    entry.destinationInsideZone = positionInsideCaptureZone(entry, position);
     entry.element.style.transition = 'none';
     entry.element.style.transform = `translate(${position.x / 100 * $('#creatureLayer').clientWidth}px, ${position.y / 100 * $('#creatureLayer').clientHeight}px)`;
     requestAnimationFrame(() => {
@@ -225,20 +285,29 @@
 
   function restartCreatureMovement(entry) {
     clearTimeout(entry.moveTimer);
-    const schedule = () => {
+    const schedule = (delay) => {
       const settings = difficultySettings();
       entry.moveTimer = setTimeout(() => {
-        if (entry.element.isConnected && !$('#playScreen').classList.contains('hidden')) moveCreature(entry);
-        schedule();
-      }, settings.moveMin + Math.random() * settings.moveRange);
+        if (!entry.element.isConnected) return;
+        const arrivedInside = !$('#playScreen').classList.contains('hidden') && moveCreature(entry);
+        const nextSettings = difficultySettings();
+        const nextDelay = arrivedInside
+          ? nextSettings.transition * 1000 + nextSettings.zoneStay
+          : nextSettings.moveMin + Math.random() * nextSettings.moveRange;
+        schedule(nextDelay);
+      }, delay);
     };
-    schedule();
+    const settings = difficultySettings();
+    schedule(entry.destinationInsideZone
+      ? settings.zoneStay
+      : settings.moveMin + Math.random() * settings.moveRange);
   }
 
   function removeCreature(id, caught = false) {
     const entry = state.creatures.get(id);
     if (!entry) return;
     clearTimeout(entry.moveTimer);
+    clearTimeout(entry.targetTimer);
     clearTimeout(entry.lifeTimer);
     entry.element.classList.add('vanish');
     setTimeout(() => entry.element.remove(), 420);
@@ -330,13 +399,14 @@
 
   function beginCaptureCooldown() {
     const button = $('#captureButton');
-    state.captureReadyAt = Date.now() + 1000;
+    const cooldown = difficultySettings().cooldown;
+    state.captureReadyAt = Date.now() + cooldown;
     button.disabled = true;
     button.classList.add('cooling');
     button.setAttribute('aria-label', '포획 버튼 재충전 중');
     const render = () => {
       const remaining = Math.max(0, state.captureReadyAt - Date.now());
-      button.style.setProperty('--cooldown-progress', `${Math.min(360, (1 - remaining / 1000) * 360)}deg`);
+      button.style.setProperty('--cooldown-progress', `${Math.min(360, (1 - remaining / cooldown) * 360)}deg`);
       const label = $('b', button);
       if (remaining > 0) {
         label.textContent = `${(remaining / 1000).toFixed(1)}초`;
@@ -587,7 +657,7 @@
   function profileMarkup(profile, own = false) {
     return `
       <section class="user-profile-card">
-        <div class="profile-avatar">${escapeHtml(profile.avatar || '🌊')}</div>
+        <div class="profile-avatar">${avatarMarkup(profile, `${profile.nickname || '탐험가'}의 프로필 사진`)}</div>
         <h2>${escapeHtml(profile.nickname || profile.displayName || '바다 탐험가')}</h2>
         <span>${profile.online ? '● 온라인' : '○ 오프라인'}</span>
         <dl>
@@ -602,15 +672,64 @@
   async function openProfileEditor(profile = null, required = false) {
     if (!requireLogin('프로필 등록')) return;
     const current = profile || await window.OceanCloud.getMyProfile().catch(() => ({}));
+    const avatarIcons = ['🌊', '⚓', '🐬', '🐢', '🐳', '🦀', '🐙', '🪼', '🏄', '⛵'];
+    let selectedAvatar = current.avatar || '🌊';
+    let selectedAvatarImage = safeAvatarImage(current.avatarImage);
     const dialog = openDialog(required ? '프로필을 완성해 주세요' : '내 프로필 수정', required ? 'WELCOME, OCEAN EXPLORER' : 'MY PROFILE', `
       <div class="dialog-note">${required ? '닉네임, 거주지, 나이와 소개를 등록하면 다른 탐험가들과 소통할 수 있어요.' : '수정한 정보는 Firebase에 저장되고 다른 로그인 사용자에게 공개됩니다.'}</div>
       <form class="dialog-form profile-form" id="profileForm">
+        <section class="avatar-editor" aria-labelledby="avatarEditorTitle">
+          <div id="profileAvatarPreview" class="avatar-preview">${avatarMarkup(current, '선택한 프로필 사진')}</div>
+          <div>
+            <b id="avatarEditorTitle">프로필 사진</b>
+            <small>아이콘을 고르거나 내 사진을 등록하세요.</small>
+          </div>
+          <div class="avatar-options">
+            ${avatarIcons.map((icon) => `<button class="${!selectedAvatarImage && icon === selectedAvatar ? 'selected' : ''}" type="button" data-avatar-icon="${icon}" aria-label="${icon} 아이콘 선택">${icon}</button>`).join('')}
+          </div>
+          <div class="avatar-upload-actions">
+            <label for="profileCameraInput">📷 사진 찍기</label>
+            <label for="profileGalleryInput">🖼️ 보관함 선택</label>
+          </div>
+          <input id="profileCameraInput" type="file" accept="image/*" capture="user" hidden>
+          <input id="profileGalleryInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+          <p id="avatarUploadStatus" class="avatar-upload-status" role="status"></p>
+        </section>
         <label>닉네임<input id="profileNickname" maxlength="24" minlength="2" required value="${escapeHtml(current.nickname || current.displayName || '')}" placeholder="예: 광안리돌고래"></label>
         <label>거주지<input id="profileResidence" maxlength="40" required value="${escapeHtml(current.residence || current.location || '')}" placeholder="예: 부산광역시 수영구"></label>
         <label>나이<input id="profileAge" type="number" min="1" max="120" required value="${current.age ? Number(current.age) : ''}" placeholder="나이"></label>
         <label>기타 설명<textarea id="profileBio" maxlength="300" placeholder="좋아하는 해양 활동이나 나를 소개해 주세요.">${escapeHtml(current.bio || '')}</textarea></label>
         <button class="dialog-primary" type="submit">프로필 저장하기</button>
       </form>`);
+    const preview = $('#profileAvatarPreview', dialog.body);
+    const status = $('#avatarUploadStatus', dialog.body);
+    const renderAvatarPreview = () => {
+      preview.innerHTML = selectedAvatarImage
+        ? `<img src="${escapeHtml(selectedAvatarImage)}" alt="선택한 프로필 사진">`
+        : `<span aria-hidden="true">${escapeHtml(selectedAvatar)}</span>`;
+      $$('[data-avatar-icon]', dialog.body).forEach((button) => {
+        button.classList.toggle('selected', !selectedAvatarImage && button.dataset.avatarIcon === selectedAvatar);
+      });
+    };
+    $$('[data-avatar-icon]', dialog.body).forEach((button) => button.addEventListener('click', () => {
+      selectedAvatar = button.dataset.avatarIcon;
+      selectedAvatarImage = '';
+      status.textContent = '아이콘을 프로필 사진으로 선택했어요.';
+      renderAvatarPreview();
+    }));
+    const handleProfilePhoto = async (file) => {
+      if (!file) return;
+      status.textContent = '사진을 프로필 크기에 맞게 준비하고 있어요...';
+      try {
+        selectedAvatarImage = await compressProfileImage(file);
+        status.textContent = '사진이 준비됐어요. 저장 버튼을 눌러 완료하세요.';
+        renderAvatarPreview();
+      } catch (error) {
+        status.textContent = error.message || '사진을 준비하지 못했어요.';
+      }
+    };
+    $('#profileCameraInput', dialog.body).addEventListener('change', (event) => handleProfilePhoto(event.target.files?.[0]));
+    $('#profileGalleryInput', dialog.body).addEventListener('change', (event) => handleProfilePhoto(event.target.files?.[0]));
     $('#profileForm', dialog.body).addEventListener('submit', async (event) => {
       event.preventDefault();
       const button = $('button[type="submit"]', event.currentTarget);
@@ -620,7 +739,9 @@
           nickname: $('#profileNickname', dialog.body).value,
           residence: $('#profileResidence', dialog.body).value,
           age: $('#profileAge', dialog.body).value,
-          bio: $('#profileBio', dialog.body).value
+          bio: $('#profileBio', dialog.body).value,
+          avatar: selectedAvatar,
+          avatarImage: selectedAvatarImage
         });
         state.user.displayName = saved.nickname;
         state.user.profile = saved;
@@ -676,7 +797,7 @@
     const items = state.notifications;
     const body = items.length ? items.map((item) => `
       <button class="notification-row ${item.read ? '' : 'unread'}" type="button" data-notification="${escapeHtml(item.id)}" data-notification-type="${escapeHtml(item.type || '')}">
-        <span>${escapeHtml(item.actorAvatar || '🌊')}</span>
+        <span>${avatarMarkup({ avatar: item.actorAvatar, avatarImage: item.actorAvatarImage }, `${item.actorName || '탐험가'}의 프로필 사진`)}</span>
         <div><b>${escapeHtml(item.actorName || '바다 탐험가')}</b><p>${escapeHtml(item.text || '새 알림이 도착했어요.')}</p><small>${escapeHtml(item.timeLabel || '방금 전')}</small></div>
       </button>`).join('') : '<div class="dialog-note">아직 도착한 알림이 없어요.</div>';
     const dialog = openDialog('알림', `${items.filter((item) => !item.read).length}개의 읽지 않은 알림`, `<div class="notification-list">${body}</div>`);
@@ -707,7 +828,7 @@
       list.innerHTML = people.map((person) => {
         const labels = { none: '친구 요청', sent: '요청 보냄', received: '요청 수락', friends: '친구 삭제' };
         return `<article class="profile-row">
-          <button class="profile-link" type="button" data-profile="${escapeHtml(person.uid)}"><span>${escapeHtml(person.avatar || '🌊')}</span><div><b>${escapeHtml(person.nickname || person.displayName || '바다 탐험가')}</b><small>${escapeHtml(person.residence || person.location || '부산')} · ${person.age ? `${Number(person.age)}세 · ` : ''}${person.online ? '● 온라인' : '○ 오프라인'}</small></div></button>
+          <button class="profile-link" type="button" data-profile="${escapeHtml(person.uid)}"><span>${avatarMarkup(person, `${person.nickname || '탐험가'}의 프로필 사진`)}</span><div><b>${escapeHtml(person.nickname || person.displayName || '바다 탐험가')}</b><small>${escapeHtml(person.residence || person.location || '부산')} · ${person.age ? `${Number(person.age)}세 · ` : ''}${person.online ? '● 온라인' : '○ 오프라인'}</small></div></button>
           <button type="button" data-person="${escapeHtml(person.uid)}" data-relation="${person.relation}" ${person.relation === 'sent' ? 'disabled' : ''}>${labels[person.relation] || labels.none}</button>
         </article>`;
       }).join('');
@@ -837,7 +958,7 @@
         const canDelete = comment.authorId === state.user.uid || post.authorId === state.user.uid;
         return `<article class="comment-row">
           <button class="comment-author profile-link" type="button" data-comment-profile="${escapeHtml(comment.authorId)}">
-            <span>${escapeHtml(comment.avatar || '🌊')}</span>
+            <span>${avatarMarkup(comment, `${comment.authorName || '탐험가'}의 프로필 사진`)}</span>
             <div><b>${escapeHtml(comment.authorName || '바다 탐험가')}</b><small>${escapeHtml(comment.timeLabel || '방금 전')}</small></div>
           </button>
           <p>${escapeHtml(comment.text)}</p>
@@ -892,7 +1013,7 @@
     }
     list.innerHTML = posts.map((post) => `
       <article class="post">
-        <button class="post-user profile-link" type="button" data-post-profile="${escapeHtml(post.authorId)}"><span>${escapeHtml(post.avatar || '🌊')}</span><div><b>${escapeHtml(post.authorName || '바다 탐험가')}</b><small>${escapeHtml(post.location || '부산')} · ${escapeHtml(post.timeLabel || '최근')}</small></div></button>
+        <button class="post-user profile-link" type="button" data-post-profile="${escapeHtml(post.authorId)}"><span>${avatarMarkup(post, `${post.authorName || '탐험가'}의 프로필 사진`)}</span><div><b>${escapeHtml(post.authorName || '바다 탐험가')}</b><small>${escapeHtml(post.location || '부산')} · ${escapeHtml(post.timeLabel || '최근')}</small></div></button>
         <h3>${escapeHtml(post.title)}</h3><p>${escapeHtml(post.body)}</p>
         <div class="post-meta"><span>📍 ${escapeHtml(post.location || '부산')}</span><b>부산 바다 피드</b></div>
         <div class="post-tools">
@@ -930,7 +1051,7 @@
     const online = connected && navigator.onLine && document.visibilityState === 'visible';
     $('#cloudState').textContent = connected ? (online ? '온라인' : '오프라인') : '체험 모드';
     $('#cloudState').classList.toggle('online', online);
-    $('#authButton').textContent = '👤';
+    $('#authButton').innerHTML = connected ? avatarMarkup(user.profile || user, '내 프로필 사진') : '<span aria-hidden="true">👤</span>';
     $('#authButton').title = connected ? '내 프로필' : 'Google 로그인';
     $('#authBanner').classList.toggle('connected', connected);
     $('#communityLoginButton').textContent = connected ? `${user.displayName || '탐험가'} · 로그인됨` : 'Google 로그인';

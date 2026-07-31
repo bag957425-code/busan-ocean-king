@@ -88,9 +88,11 @@ function doPost(e) {
     var resultText = body.candidates[0].content.parts.map(function (part) {
       return part.text || '';
     }).join('').replace(/^```json\s*|```$/g, '').trim();
+    var parsedResult = JSON.parse(resultText);
+    if (Array.isArray(parsedResult)) parsedResult = parsedResult[0] || {};
     CacheService.getScriptCache().put(token, JSON.stringify({
       ok: true,
-      result: JSON.parse(resultText)
+      result: parsedResult
     }), 180);
   } catch (error) {
     CacheService.getScriptCache().put(token, JSON.stringify({

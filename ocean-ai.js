@@ -78,7 +78,7 @@
         const response = await fetchResult(token);
         if (!response.pending) {
           if (!response.ok) throw new Error(response.error || 'AI 연결이 잠시 원활하지 않아요.');
-          return response.result;
+          return Array.isArray(response.result) ? (response.result[0] || {}) : response.result;
         }
       }
       throw new Error('AI 응답 시간이 길어지고 있어요. 잠시 후 다시 시도해 주세요.');

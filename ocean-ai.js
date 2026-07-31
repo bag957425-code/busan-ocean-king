@@ -1,6 +1,5 @@
 (() => {
-  const SITES_ORIGIN = 'https://busan-ocean-king.qudwls132.chatgpt.site';
-  const API_URL = `${SITES_ORIGIN}/api/ai`;
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxvyo59LsqRySBpinKRk6lOKrzBlTT7FSu0-xAygrpsmy3s7eOutUlYY4_5dFhSvxGe/exec';
   const photoPools = new Map();
   const photoIndexes = new Map();
 
@@ -36,15 +35,57 @@
     return { data: previewUrl.split(',')[1], mimeType: 'image/jpeg', previewUrl };
   }
 
-  async function request(action, payload = {}) {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ action, ...payload })
+  function fetchResult(token) {
+    return new Promise((resolve) => {
+      const callbackName = `oceanAi_${token.replace(/[^a-z0-9]/gi, '')}`;
+      const script = document.createElement('script');
+      const cleanup = () => {
+        delete window[callbackName];
+        script.remove();
+      };
+      window[callbackName] = (data) => {
+        cleanup();
+        resolve(data);
+      };
+      script.onerror = () => {
+        cleanup();
+        resolve({ ok: false, pending: true });
+      };
+      script.src = `${API_URL}?token=${encodeURIComponent(token)}&callback=${callbackName}`;
+      document.head.appendChild(script);
     });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data.ok) throw new Error(data.error || 'AI 연결이 잠시 원활하지 않아요.');
-    return data.result;
+  }
+
+  async function request(action, payload = {}) {
+    const token = `${Date.now()}${Math.random().toString(36).slice(2)}`;
+    const frame = document.createElement('iframe');
+    const form = document.createElement('form');
+    const field = document.createElement('textarea');
+    frame.name = `oceanAiUpload${token}`;
+    frame.hidden = true;
+    form.hidden = true;
+    form.method = 'POST';
+    form.action = API_URL;
+    form.target = frame.name;
+    field.name = 'payload';
+    field.value = JSON.stringify({ action, token, ...payload });
+    form.appendChild(field);
+    document.body.append(frame, form);
+    form.submit();
+    try {
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, attempt ? 900 : 650));
+        const response = await fetchResult(token);
+        if (!response.pending) {
+          if (!response.ok) throw new Error(response.error || 'AI 연결이 잠시 원활하지 않아요.');
+          return response.result;
+        }
+      }
+      throw new Error('AI 응답 시간이 길어지고 있어요. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      frame.remove();
+      form.remove();
+    }
   }
 
   async function loadPhotoPool(item) {
